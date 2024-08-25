@@ -1,0 +1,3260 @@
+-- ++++++++ WAX BUNDLED DATA BELOW ++++++++ --
+
+-- Will be used later for getting flattened globals
+local ImportGlobals
+
+-- Holds direct closure data (defining this before the DOM tree for line debugging etc)
+local ClosureBindings = {
+    function()local wax,script,require=ImportGlobals(1)local ImportGlobals return (function(...)-- MainModule.lua
+local ElementsTable = require(script.Elements)
+local Tools = require(script.tools)
+
+local MainModule = {
+	RainbowColorValue = 0,
+	HueSelectionPosition = 0
+}
+MainModule.__index = MainModule
+
+local MainWindow = require(script.Components.MainWindow)
+
+local Create = Tools.Create
+
+local GUI = Create("ScreenGui", {
+	Parent = game.Players.LocalPlayer.PlayerGui,
+	ResetOnSpawn = false,
+	ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+})
+
+shared.NapkinGUILibrary = GUI
+
+function MainModule:IsRunning()
+	return GUI.Parent == game.Players.LocalPlayer.PlayerGui --game:GetService("CoreGui")
+end
+
+-- shit rainbow colorpicker
+coroutine.wrap(
+    function()
+        while wait() do
+            MainModule.RainbowColorValue = MainModule.RainbowColorValue + 1 / 255
+            MainModule.HueSelectionPosition = MainModule.HueSelectionPosition + 1
+
+            if MainModule.RainbowColorValue >= 1 then
+                MainModule.RainbowColorValue = 0
+            end
+
+            if MainModule.HueSelectionPosition == 127 then
+                MainModule.HueSelectionPosition = 0
+            end
+        end
+    end
+)()
+
+local Elements = {}
+Elements.__index = Elements
+Elements.__namecall = function(Table, Key, ...)
+	return Elements[Key](...)
+end
+
+for _, ElementComponent in ipairs(ElementsTable) do
+	Elements["Add" .. ElementComponent.__type] = function(self, Idx, cfg)
+		ElementComponent.Container = self.Container
+		ElementComponent.Type = self.Type
+		ElementComponent.Library = MainModule
+
+		return ElementComponent:New(Idx, cfg)
+	end
+end
+
+MainModule.Elements = Elements
+
+-- function MainModule:Version(version)
+--     self.version = version
+-- end
+
+function MainModule:Load(cfgs)
+	cfgs.ver = cfgs.ver or "0.0.1"
+	cfgs.name = cfgs.name or "name"
+    return MainWindow.new(GUI, cfgs)
+end
+
+return MainModule
+end)() end,
+    [3] = function()local wax,script,require=ImportGlobals(3)local ImportGlobals return (function(...)-- Components/MainWindow.lua
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+
+local LocalPlayer = Players.LocalPlayer
+local mouse = LocalPlayer:GetMouse()
+local MainWindow = {}
+MainWindow.__index = MainWindow
+
+local Tools = require(script.Parent.Parent.tools)
+
+local Create = Tools.Create
+local AddConnection = Tools.AddConnection
+local MakeDraggable = Tools.MakeDraggable
+
+-- local NewTab = require(script.Parent.Elements.NewTab)
+
+local function getMouse()
+	return Vector2.new(UserInputService:GetMouseLocation().X + 1, UserInputService:GetMouseLocation().Y - 35)
+end
+function Resize(part, new)
+	-- local tweenInfo = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	-- local tween = TweenService:Create(part, tweenInfo, new)
+	-- tween:Play()
+    part.Size = new.Size
+end
+
+function MainWindow.new(parent, cfgs)
+	cfgs.ver = cfgs.ver or "0.0.1"
+	cfgs.name = cfgs.name or "name"
+	local MenuToggle = false
+
+	local canvas_group = Create("CanvasGroup", {
+		-- AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = Color3.fromRGB(9, 9, 11),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 60, 0, 60),
+		-- Position = UDim2.new(0.5, 0, 0.5, 0),
+		Size = UDim2.new(0, 600, 0, 400),
+		Visible = true,
+		Parent = parent,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 6),
+			Archivable = true,
+		}),
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 6),
+		}),
+	})
+
+	local Resizer = Create("ImageButton", {
+		AnchorPoint = Vector2.new(1, 1),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(1, 0, 1, 0),
+		Size = UDim2.new(0, 20, 0, 20),
+		Visible = true,
+		ZIndex = 99,
+		AutoButtonColor = false,
+		Parent = canvas_group,
+	}, {
+		Create("ImageLabel", {
+			Image = "http://www.roblox.com/asset/?id=17577661819",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundTransparency = 1,
+			BorderColor3 = Color3.fromRGB(0, 0, 0),
+			BorderSizePixel = 0,
+			Position = UDim2.new(0.5, 0, 0.5, 0),
+			Size = UDim2.new(0, 10, 0, 10),
+			Visible = true,
+		}),
+	})
+
+	local Entered = false
+
+	AddConnection(Resizer.MouseEnter, function()
+		Entered = true
+	end)
+	AddConnection(Resizer.MouseLeave, function()
+		Entered = false
+	end)
+	local Held = false
+	UserInputService.InputBegan:Connect(function(inputObject)
+		if inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
+			Held = true
+
+			spawn(function()
+				if Entered and Resizer.Active then
+					while Held and Resizer.Active do
+
+						local mouse_location = getMouse()
+						local x = mouse_location.X - canvas_group.AbsolutePosition.X
+						local y = mouse_location.Y - canvas_group.AbsolutePosition.Y
+
+						-- X == 400 Y == 300  UDim2.new(0, 600, 0, 400)
+						if x >= 400 and y >= 300 then
+							Resize(canvas_group, {Size = UDim2.new(0, x, 0, y)})
+						elseif x >= 400 then
+							Resize(canvas_group, {Size = UDim2.new(0, x, 0, 300)})
+						elseif y >= 300 then
+							Resize(canvas_group, {Size = UDim2.new(0, 400, 0, y)})
+						else
+							Resize(canvas_group, {Size = UDim2.new(0, 400, 0, 300)})
+						end
+
+						RunService.Heartbeat:Wait()
+					end
+				end
+			end)
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(inputObject)
+		if inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
+			Held = false
+		end
+	end)
+
+	local topbar = Create("Frame", {
+		BackgroundColor3 = Color3.fromRGB(9, 9, 11),
+		BackgroundTransparency = 0.3,
+		BorderColor3 = Color3.fromRGB(39, 39, 42),
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, 45),
+		Visible = true,
+		ZIndex = 98,
+		Parent = canvas_group,
+	}, {
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(21, 21, 24),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+	})
+
+	MakeDraggable(topbar, canvas_group)
+
+	local opentab = Create("TextButton", {
+		Font = Enum.Font.SourceSans,
+		Text = "",
+		AutoButtonColor = false,
+		TextColor3 = Color3.fromRGB(0, 0, 0),
+		TextSize = 14,
+		BackgroundColor3 = Color3.fromRGB(39, 39, 42),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 10, 0, 7),
+		Size = UDim2.new(0, 30, 0, 30),
+		Visible = true,
+		Parent = topbar,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 6),
+			Archivable = true,
+		}),
+		Create("ImageLabel", {
+			Image = "http://www.roblox.com/asset/?id=17606926750",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundTransparency = 1,
+			BorderColor3 = Color3.fromRGB(0, 0, 0),
+			BorderSizePixel = 0,
+			Position = UDim2.new(0.5, 0, 0.5, 0),
+			Size = UDim2.new(0, 20, 0, 20),
+			Visible = true,
+		}),
+	})
+
+	local searchbox = Create("TextBox", {
+		Font = Enum.Font.Gotham,
+		PlaceholderText = "Search",
+		Text = "",
+		TextColor3 = Color3.fromRGB(250, 250, 250),
+		TextSize = 14,
+		TextStrokeColor3 = Color3.fromRGB(156, 156, 164),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		AnchorPoint = Vector2.new(1, 0.5),
+		-- AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = Color3.fromRGB(39, 39, 42),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(1, -10, 0.5, 0),
+		Size = UDim2.new(0, -5, 0, 30),
+		Visible = true,
+		Parent = topbar,
+	}, {
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(39, 39, 42),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 4),
+			Archivable = true,
+		}),
+		Create("UIPadding", {
+			PaddingLeft = UDim.new(0, 10),
+			PaddingRight = UDim.new(0, 60),
+		}),
+	})
+
+	local keybind = Create("TextLabel", {
+		Font = Enum.Font.Gotham,
+		LineHeight = 0,
+		Text = "Ctrl+F",
+		TextColor3 = Color3.fromRGB(136, 136, 136),
+		TextSize = 12,
+		AnchorPoint = Vector2.new(1, 0.5),
+		AutomaticSize = Enum.AutomaticSize.X,
+		BackgroundColor3 = Color3.fromRGB(39, 39, 42),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(1, -16, 0.5, 0),
+		Size = UDim2.new(0, 30, 0, 20),
+		Visible = true,
+		Parent = topbar,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 4),
+			Archivable = true,
+		}),
+		Create("UIPadding", {
+			PaddingLeft = UDim.new(0, 7),
+			PaddingRight = UDim.new(0, 7),
+		}),
+	})
+
+	Create("TextLabel", {
+		Font = Enum.Font.Gotham,
+		LineHeight = 0,
+		RichText = true,
+		Text = `{cfgs.name} - <font color="#bebebe">Game Name</font>`,
+		TextColor3 = Color3.fromRGB(240, 240, 240),
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 50, 0, 0),
+		Size = UDim2.new(0, 301, 0, 45),
+		Visible = true,
+		Parent = topbar,
+	})
+
+	local mainscroll = Create("ScrollingFrame", {
+		CanvasSize = UDim2.new(0, 0, 0, 440),
+		ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0),
+		ScrollBarThickness = 0,
+		Active = true,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 1, 0),
+		Visible = true,
+		Parent = canvas_group,
+	}, {
+		Create("UIListLayout", {
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+
+	local creditframe = Create("Frame", {
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		LayoutOrder = 99,
+		Size = UDim2.new(1, 0, 0, 50),
+		Visible = true,
+		Parent = mainscroll,
+	}, {
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(21, 21, 24),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+	})
+	Create("TextLabel", {
+		Font = Enum.Font.Gotham,
+		RichText = true,
+		Text = `Ui Library Maded By <font color="#fafafa">Xrer</font>, Using For <font color="#fafafa">{cfgs.name}</font>. version - <font color="#fafafa">{cfgs.ver}</font>`,
+		TextColor3 = Color3.fromRGB(190, 190, 190),
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 15, 0, 0),
+		Size = UDim2.new(0, 566, 0, 50),
+		Visible = true,
+		Parent = creditframe,
+	})
+
+	-- TabsFrame
+	local tabs = Create("Frame", {
+		BackgroundColor3 = Color3.fromRGB(9, 9, 11),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, -300, 0, 0),
+		Size = UDim2.new(0, 280, 1, 0),
+		Visible = true,
+		ZIndex = 900,
+		Parent = canvas_group,
+	}, {
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(21, 21, 24),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+	})
+
+	local tabbtnholder = Create("ScrollingFrame", {
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		ScrollBarImageColor3 = Color3.fromRGB(85, 85, 85),
+		ScrollBarThickness = 2,
+		Active = true,
+		BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		LayoutOrder = 1,
+		Position = UDim2.new(0, 0, 0, 72),
+		Size = UDim2.new(1, 0, 1, -72),
+		Visible = true,
+		ZIndex = 4,
+		Parent = tabs,
+	}, {
+		Create("UIListLayout", {
+			Padding = UDim.new(0, 8),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+		Create("UIPadding", {
+			PaddingBottom = UDim.new(0, 10),
+			PaddingLeft = UDim.new(0, 14),
+			PaddingRight = UDim.new(0, 14),
+			PaddingTop = UDim.new(0, 10),
+		}),
+	})
+
+	Create("TextLabel", {
+		Font = Enum.Font.Gotham,
+		Text = "Here you need to select the section with the function you need.",
+		TextColor3 = Color3.fromRGB(156, 156, 165),
+		TextSize = 14,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 14, 0, 35),
+		Size = UDim2.new(0, 252, 0, 34),
+		Visible = true,
+		ZIndex = 4,
+		Parent = tabs,
+	}, {})
+
+	Create("TextLabel", {
+		Font = Enum.Font.Gotham,
+		Text = "Next Hub",
+		TextColor3 = Color3.fromRGB(250, 250, 250),
+		TextSize = 16,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 15, 0, 12),
+		Size = UDim2.new(0, 200, 0, 22),
+		Visible = true,
+		ZIndex = 4,
+		Parent = tabs,
+	})
+
+	local clesebtnholder = Create("TextButton", {
+		Font = Enum.Font.SourceSans,
+		Text = "",
+		TextColor3 = Color3.fromRGB(0, 0, 0),
+		TextSize = 14,
+		AutoButtonColor = false,
+		AnchorPoint = Vector2.new(1, 0),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(1, -10, 0, 12),
+		Size = UDim2.new(0, 20, 0, 20),
+		Visible = true,
+		Parent = tabs,
+	}, {
+		Create("ImageLabel", {
+			Image = "rbxassetid://15269329696",
+			ImageColor3 = Color3.fromRGB(200, 200, 200),
+			ImageRectOffset = Vector2.new(0, 514),
+			ImageRectSize = Vector2.new(256, 256),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundTransparency = 1,
+			BorderColor3 = Color3.fromRGB(0, 0, 0),
+			BorderSizePixel = 0,
+			Position = UDim2.new(0.5, 0, 0.5, 0),
+			Size = UDim2.new(0, 16, 0, 16),
+			Visible = true,
+		}),
+	})
+
+	local shadowTabs = Create("TextButton", {
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		BackgroundTransparency = 0.20000000298023224,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Size = UDim2.new(1, 0, 1, 0),
+		Visible = false,
+		ZIndex = 200,
+		Text = "",
+		Parent = canvas_group,
+	})
+
+	-- Loading Bar
+	--[[
+	local Loading = Create("TextButton", {
+		BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+		BackgroundTransparency = 0.20000000298023224,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		AutoButtonColor = false,
+		Size = UDim2.new(1, 0, 1, 0),
+		Visible = true,
+		ZIndex = 9999,
+		Text = "",
+		Parent = canvas_group,
+	})
+
+	local loadframe = Create("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0.5, 0, 0.5, 0),
+		Size = UDim2.new(0, 100, 0, 100),
+		Visible = true,
+		Parent = Loading,
+	}, {
+		Create("UIListLayout", {
+			Padding = UDim.new(0, 6),
+			FillDirection = Enum.FillDirection.Horizontal,
+			HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+		}),
+	})
+
+	local loader = Create("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0.5, -4, 0.5, -20),
+		Size = UDim2.new(0, 6, 0, 40),
+		Visible = true,
+		Parent = loadframe,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 8),
+			Archivable = true,
+		}),
+	})
+
+	local loader_after = Create("Frame", {
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 10, 0, 0),
+		Size = UDim2.new(0, 6, 0, 40),
+		Visible = true,
+		Parent = loadframe,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 8),
+			Archivable = true,
+		}),
+	})
+
+	local loader_before = Create("Frame", {
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, -10, 0, 0),
+		Size = UDim2.new(0, 6, 0, 40),
+		Visible = true,
+		Parent = loadframe,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 8),
+			Archivable = true,
+		}),
+	})
+
+	local function createLoad(instance)
+		local tweenInfo = TweenInfo.new(
+			0.45, -- Time
+			Enum.EasingStyle.Linear, -- EasingStyle
+			Enum.EasingDirection.InOut, -- EasingDirection
+			-1, -- RepeatCount (-1 for infinite)
+			true -- Reverses
+		)
+
+		local tweenGoal = { Size = UDim2.new(0, 6, 0, 10) }
+
+		return TweenService:Create(instance, tweenInfo, tweenGoal)
+	end
+
+	local mainTween = createLoad(loader)
+	local beforeTween = createLoad(loader_before)
+	local afterTween = createLoad(loader_after)
+
+	-- Play the tweens with delays
+	spawn(function()
+		while true do
+			mainTween:Play()
+			wait(0.5)
+			-- wait(0.4)
+			beforeTween:Play()
+			wait(0.5)
+			afterTween:Play()
+		end
+	end)
+
+	task.delay(8, function()
+		Loading.Visible = false
+	end)
+	]]--
+	local isSearchBoxFocused = false
+
+	-- Animation's
+	local function createTween(target, properties, duration)
+		TweenService
+			:Create(target, TweenInfo.new(duration, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), properties)
+			:Play()
+	end
+
+	local function ToggleTabsBtnHolder()
+		MenuToggle = not MenuToggle
+		createTween(tabs, { Position = MenuToggle and UDim2.new(0, 0, 0, 0) or UDim2.new(0, -300, 0, 0) }, 0.7)
+		createTween(shadowTabs, { BackgroundTransparency = MenuToggle and 0.8 or 1 }, 0.7)
+		shadowTabs.Visible = MenuToggle
+	end
+
+	local function addMouseConnections(button, enterColor, leaveColor)
+		AddConnection(button.MouseEnter, function()
+			createTween(button.ImageLabel, { ImageColor3 = enterColor }, 0.25)
+		end)
+		AddConnection(button.MouseLeave, function()
+			createTween(button.ImageLabel, { ImageColor3 = leaveColor }, 0.25)
+		end)
+	end
+
+	local function addFocusConnections(box, focusColor, unfocusColor)
+		AddConnection(box.Focused, function()
+			isSearchBoxFocused = true
+			createTween(box.UIStroke, { Color = focusColor }, 0.25)
+			createTween(keybind, { TextColor3 = focusColor }, 0.25)
+		end)
+		AddConnection(box.FocusLost, function()
+			isSearchBoxFocused = false
+			createTween(box.UIStroke, { Color = unfocusColor }, 0.25)
+			createTween(keybind, { TextColor3 = Color3.fromRGB(136, 136, 136) }, 0.25)
+		end)
+	end
+
+	local function addHoverConnections(box, hoverColor, leaveColor)
+		AddConnection(box.MouseEnter, function()
+			if not isSearchBoxFocused then
+				createTween(box.UIStroke, { Color = hoverColor }, 0.25)
+				createTween(keybind, { TextColor3 = hoverColor }, 0.25)
+			end
+		end)
+		AddConnection(box.MouseLeave, function()
+			if not isSearchBoxFocused then
+				createTween(box.UIStroke, { Color = leaveColor }, 0.25)
+				createTween(keybind, { TextColor3 = Color3.fromRGB(136, 136, 136) }, 0.25)
+			end
+		end)
+	end
+
+	-- Tab toggling
+	AddConnection(opentab.MouseButton1Click, ToggleTabsBtnHolder)
+	AddConnection(clesebtnholder.MouseButton1Click, ToggleTabsBtnHolder)
+	AddConnection(shadowTabs.MouseButton1Click, ToggleTabsBtnHolder)
+
+	-- Mouse enter/leave for close button holder
+	addMouseConnections(clesebtnholder, Color3.fromRGB(255, 60, 60), Color3.fromRGB(200, 200, 200))
+
+	-- Search box focus and hover
+	addFocusConnections(searchbox, Color3.fromRGB(245, 245, 245), Color3.fromRGB(39, 39, 42))
+	addHoverConnections(searchbox, Color3.fromRGB(245, 245, 245), Color3.fromRGB(39, 39, 42))
+
+	-- function SearchElementsInTabs()
+	-- 	local mainScroll = mainscroll
+	-- 	local searchText = string.lower(searchbox.Text)
+	
+	-- 	for _, tab in pairs(mainScroll:GetChildren()) do
+	-- 		if tab:IsA("ScrollingFrame") and tab.Visible then
+	-- 			for _, element in ipairs(tab:GetChildren()) do
+	-- 				if element:IsA("TextButton") then
+	-- 					local elementName = element.Name
+	-- 					if elementName and (searchText == "" or string.find(string.lower(elementName), searchText, 1, true)) then
+	-- 						element.Visible = true
+	-- 						if searchText ~= "" then
+	-- 							local startIndex, endIndex = string.find(string.lower(elementName), searchText, 1, true)
+	-- 							if startIndex and endIndex then
+	-- 								local preMatch = string.sub(elementName, 1, startIndex - 1)
+	-- 								local match = string.sub(elementName, startIndex, endIndex)
+	-- 								local postMatch = string.sub(elementName, endIndex + 1)
+	
+	-- 								element.name.Text = string.format("%s<u>%s</u>%s", preMatch, match, postMatch)
+	-- 							end
+	-- 						else
+	-- 							element.name.Text = elementName
+	-- 						end
+	-- 					else
+	-- 						element.Visible = false
+	-- 					end
+	-- 				end
+	-- 			end
+	-- 		end
+	-- 	end
+	-- end
+	function SearchElementsInTabs()
+		local mainScroll = mainscroll
+		local searchText = string.lower(searchbox.Text)
+	
+		for _, tab in pairs(mainScroll:GetChildren()) do
+			if tab:IsA("ScrollingFrame") and tab.Visible then
+				for _, element in ipairs(tab:GetChildren()) do
+					if element:IsA("TextButton") then
+						local elementName = element.Name
+						local elementDescription = element:GetAttribute("description") or ""
+	
+						-- Ищем как по имени элемента, так и по его описанию
+						local foundByName = elementName and (searchText == "" or string.find(string.lower(elementName), searchText, 1, true))
+						local foundByDescription = elementDescription and (searchText == "" or string.find(string.lower(elementDescription), searchText, 1, true))
+	
+						if foundByName or foundByDescription then
+							element.Visible = true
+							if searchText ~= "" then
+								local startIndex, endIndex
+								local match
+								local textToFormat
+								if foundByName then
+									startIndex, endIndex = string.find(string.lower(elementName), searchText, 1, true)
+									match = string.sub(elementName, startIndex, endIndex)
+									textToFormat = elementName
+								elseif foundByDescription then
+									startIndex, endIndex = string.find(string.lower(elementDescription), searchText, 1, true)
+									match = string.sub(elementDescription, startIndex, endIndex)
+									textToFormat = elementDescription
+								end
+								if startIndex and endIndex then
+									local preMatch = string.sub(textToFormat, 1, startIndex - 1)
+									local postMatch = string.sub(textToFormat, endIndex + 1)
+	
+									if foundByName then
+										element.name.Text = string.format("%s<u>%s</u>%s", preMatch, match, postMatch)
+									elseif foundByDescription then
+										element.description.Text = string.format("%s<u>%s</u>%s", preMatch, match, postMatch)
+									end
+								end
+							else
+								element.name.Text = elementName
+								element.description.Text = elementDescription
+							end
+						else
+							element.Visible = false
+						end
+					end
+				end
+			end
+		end
+	end
+	AddConnection(searchbox.Changed, SearchElementsInTabs)
+	AddConnection(searchbox.Changed, function()
+		searchbox.Size = UDim2.new(0, searchbox.TextBounds.X + 60, 0, 30)
+	end)
+	searchbox.Size = UDim2.new(0, searchbox.TextBounds.X + 60, 0, 30)
+
+	-- print(TabModule.Tabs.Container)
+	local TabModule = require(script.Parent.TabModule)
+	-- function SearchElementsInTabs()
+	-- 	local Tabs = TabModule.Tabs -- mainscroll
+	-- 	local searchText = string.lower(searchbox.Text)
+	-- 	for _, tab in pairs(Tabs) do
+	-- 		if tab["Container"].Visible then
+	-- 			for _, element in ipairs(tab["Container"]:GetDescendants()) do
+	-- 				if element:IsA("TextButton") then
+	-- 					local elementName = element.Name
+	-- 					if elementName and (searchText == "" or string.find(string.lower(elementName), searchText, 1, true)) then
+	-- 						element.Visible = true
+	-- 						if searchText ~= "" then
+	-- 							local startIndex, endIndex = string.find(string.lower(elementName), searchText, 1, true)
+	-- 							if startIndex and endIndex then
+	-- 								local preMatch = string.sub(elementName, 1, startIndex - 1)
+	-- 								local match = string.sub(elementName, startIndex, endIndex)
+	-- 								local postMatch = string.sub(elementName, endIndex + 1)
+
+	-- 								-- %s<font color=\"rgb(147, 147, 149)\">%s</font>%s
+									
+	-- 								element.name.Text = string.format("%s<u>%s</u>%s", preMatch, match, postMatch)
+	-- 							end
+	-- 						else
+	-- 							element.name.Text = elementName 
+	-- 						end
+	-- 					else
+	-- 						element.Visible = false
+	-- 					end
+	-- 				end
+	-- 			end
+	-- 		end
+	-- 	end
+	-- end
+	
+
+	local Tabs = {}
+
+	function Tabs:NewTab(title)
+		return TabModule:New({
+			title = title,
+			TabHolder = mainscroll,
+			TabBtnHolder = tabbtnholder,
+		})
+	end
+
+	function Tabs:SelectTab(Tab)
+		Tab = Tab or 1
+		TabModule:SelectTab(Tab)
+		print(TabModule.Tabs)
+	end
+	
+	-- print(TabModule:GetTabsContainerTable())
+
+	return Tabs
+end
+
+return MainWindow
+end)() end,
+    [4] = function()local wax,script,require=ImportGlobals(4)local ImportGlobals return (function(...)local TweenService = game:GetService("TweenService")
+
+local Tools = require(script.Parent.Parent.tools)
+local TabModule = {
+	Window = nil,
+	Tabs = {},
+	Containers = {},
+	SelectedTab = 0,
+	TabCount = 0,
+}
+
+local Create = Tools.Create
+local AddConnection = Tools.AddConnection
+
+function TabModule:New(cfg)
+	cfg.title = cfg.title or "Tab"
+	cfg.TabHolder = cfg.TabHolder or nil
+	cfg.TabBtnHolder = cfg.TabBtnHolder or nil
+
+	local Library = require(script.Parent.Parent)
+	local Window = TabModule.Window
+	local Elements = Library.Elements
+
+	TabModule.TabCount = TabModule.TabCount + 1
+	local TabIndex = TabModule.TabCount
+	TabModule.Window = cfg.TabHolder
+
+	local Tab = {
+		Selected = false,
+		Name = cfg.title,
+		Type = "Tab",
+	}
+
+    Tab.TabBtn = Create("TextButton", {
+        Font = Enum.Font.Gotham,
+        TextColor3 = Color3.fromRGB(9,9,11),
+        TextSize = 14,
+		AutoButtonColor = false,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundColor3 = Color3.fromRGB(250,250,250),
+        BorderColor3 = Color3.fromRGB(0,0,0),
+        BorderSizePixel = 0,
+		Text = cfg.title,
+        Size = UDim2.new(1, 0, 0, 40),
+        Visible = true,
+        Parent = cfg.TabBtnHolder,
+    }, {
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 6),
+            Archivable = true,
+        }),
+        Create("UIPadding", {
+            PaddingLeft = UDim.new(0, 15),
+            PaddingRight = UDim.new(0, 15),
+        })
+    })
+
+	Tab.Container = Create("ScrollingFrame", {
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		ScrollBarImageColor3 = Color3.fromRGB(85, 85, 85),
+		ScrollBarThickness = 2,
+		Active = true,
+		BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		LayoutOrder = 0,
+		Size = UDim2.new(1, 0, 1, -50),
+		Visible = true,
+		Parent = cfg.TabHolder,
+	}, {
+        Create("UIListLayout", {
+            Padding = UDim.new(0, 1),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+        }),
+        Create("UIPadding", {
+            PaddingTop = UDim.new(0, 45),
+        })
+    })
+
+	Tab.ContainerFrame = Tab.Container
+
+	AddConnection(Tab.TabBtn.MouseButton1Click, function()
+		TabModule:SelectTab(TabIndex)
+	end)
+
+	TabModule.Containers[TabIndex] = Tab.ContainerFrame
+	TabModule.Tabs[TabIndex] = Tab
+
+	setmetatable(Tab, Elements)
+	return Tab
+end
+
+
+function TabModule:SelectTab(Tab)
+	TabModule.SelectedTab = Tab
+
+	print(TabModule.Tabs)
+
+	for _, v in next, TabModule.Tabs do
+		TweenService:Create(v.TabBtn, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+		TweenService:Create(v.TabBtn, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(226, 226, 226)}):Play()
+		v.Selected = false
+	end
+
+	TweenService:Create(TabModule.Tabs[Tab].TabBtn, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()    
+	TweenService:Create(TabModule.Tabs[Tab].TabBtn, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {TextColor3 = Color3.fromRGB(9,9,11)}):Play()
+
+    task.spawn(function()
+        for _, Container in pairs(TabModule.Containers) do
+            Container.Visible = false
+        end
+
+        TabModule.Containers[Tab].Visible = true
+    end)
+end
+
+return TabModule
+end)() end,
+    [5] = function()local wax,script,require=ImportGlobals(5)local ImportGlobals return (function(...)local Elements = {}
+
+for _, Theme in next, script:GetChildren() do
+	table.insert(Elements, require(Theme))
+end
+
+print(Elements)
+
+return Elements
+end)() end,
+    [6] = function()local wax,script,require=ImportGlobals(6)local ImportGlobals return (function(...)local Element = {}
+Element.__index = Element
+Element.__type = "Button"
+local Tools = require(script.Parent.Parent.tools)
+
+local Create = Tools.Create
+local AddConnection = Tools.AddConnection
+
+function Element:New(cfg)
+    cfg.Title = cfg.Title or "Title"
+	cfg.Description = cfg.Description or "Description"
+    cfg.Callback = cfg.Callback or function() end
+    local Button = {}
+
+    Button.Frame = Create("TextButton", {
+        Name = cfg.Title,
+        Font = Enum.Font.SourceSans,
+        Text = "",
+        TextTransparency = 1,
+        TextColor3 = Color3.fromRGB(0,0,0),
+        TextSize = 14,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BackgroundTransparency = 1,
+        BorderColor3 = Color3.fromRGB(0,0,0),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0.519230783, 0),
+        Size = UDim2.new(1, 0, 0, 40),
+        Visible = true,
+        Parent = self.Container,
+    }, {
+        Create("UIStroke", {
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            Color = Color3.fromRGB(21,21,24),
+            Enabled = true,
+            LineJoinMode = Enum.LineJoinMode.Round,
+            Thickness = 1,
+            Archivable = true,
+        }),
+        Create("UIPadding", {
+            PaddingBottom = UDim.new(0, 10),
+            PaddingLeft = UDim.new(0, 14),
+            PaddingRight = UDim.new(0, 14),
+            PaddingTop = UDim.new(0, 10),
+            Archivable = true,
+        }),
+    })
+    Button.Frame:SetAttribute("description", cfg.Description)
+    
+    local titleLabel = Create("TextLabel", {
+        Name = "name",
+        Font = Enum.Font.Gotham,
+        Text = cfg.Title,
+        RichText = true,
+        TextColor3 = Color3.fromRGB(234,234,234),
+        TextSize = 14,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BackgroundTransparency = 1,
+        BorderColor3 = Color3.fromRGB(0,0,0),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 16),
+        Visible = true,
+        Parent = Button.Frame,
+    })
+    
+    local descriptionLabel = Create("TextLabel", {
+        Name = "description",
+        Font = Enum.Font.Gotham,
+        RichText = true,
+        Text = cfg.Description,
+        TextColor3 = Color3.fromRGB(154,154,154),
+        TextSize = 14,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BackgroundTransparency = 1,
+        BorderColor3 = Color3.fromRGB(0,0,0),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 20),
+        Size = UDim2.new(1, 0, 0, 16),
+        Visible = true,
+        Parent = Button.Frame,
+    })
+
+    local TweenService = game:GetService("TweenService")
+
+    AddConnection(Button.Frame.MouseEnter, function()
+		TweenService:Create(Button.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 0.98}):Play()
+	end)
+
+	AddConnection(Button.Frame.MouseLeave, function()
+		TweenService:Create(Button.Frame, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+	end)
+
+    AddConnection(Button.Frame.MouseButton1Up, function()
+		cfg.Callback()
+	end)
+
+    function Button:Set(cfgs)
+        cfgs.Title = cfgs.Title or cfg.Title
+        cfgs.Description = cfgs.Description or cfg.Description
+
+        Button.Frame.Name = cfgs.Title
+        Button.Frame:SetAttribute("description", cfgs.Description)
+        titleLabel.Text = cfgs.Title
+        descriptionLabel.Text = cfgs.Description
+    end
+
+    return Button
+end
+
+return Element
+end)() end,
+    [7] = function()local wax,script,require=ImportGlobals(7)local ImportGlobals return (function(...)local Element = {}
+Element.__index = Element
+Element.__type = "Colorpicker"
+
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local mouse = LocalPlayer:GetMouse()
+
+local Tools = require(script.Parent.Parent.tools)
+
+local Create = Tools.Create
+local AddConnection = Tools.AddConnection
+
+function Element:New(cfg)
+	local lib = require(script.Parent.Parent)
+	cfg.Title = cfg.Title or "Title"
+	cfg.Description = cfg.Description or "Description"
+	cfg.Color = cfg.Color or Color3.fromRGB(0,0,0)
+	cfg.Callback = cfg.Callback or function() end
+
+	local preset = cfg.Color
+
+	local ColorH, ColorS, ColorV = Color3.toHSV(preset)
+	local RainbowColorPicker = false
+	local ColorInput, HueInput = nil, nil
+	local Colorpicker = {
+		ColorpickerToggle = false,
+		RainbowMode = false,
+	}
+
+	Colorpicker.Frame = Create("TextButton", {
+		Name = cfg.Title,
+		Font = Enum.Font.SourceSans,
+		Text = "",
+		TextTransparency = 1,
+		TextColor3 = Color3.fromRGB(0, 0, 0),
+		TextSize = 14,
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0.519230783, 0),
+		Size = UDim2.new(1, 0, 0, 40),
+		Visible = true,
+		Parent = self.Container,
+	}, {
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(21, 21, 24),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+		Create("UIPadding", {
+			PaddingBottom = UDim.new(0, 10),
+			PaddingLeft = UDim.new(0, 14),
+			PaddingRight = UDim.new(0, 14),
+			PaddingTop = UDim.new(0, 10),
+			Archivable = true,
+		}),
+	})
+	Colorpicker.Frame:SetAttribute("description", cfg.Description)
+
+	local titleLabel = Create("TextLabel", {
+		Name = "name",
+		Font = Enum.Font.Gotham,
+		Text = cfg.Title,
+		RichText = true,
+		TextColor3 = Color3.fromRGB(234, 234, 234),
+		TextSize = 14,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, -60, 0, 16),
+		Visible = true,
+		Parent = Colorpicker.Frame,
+	})
+
+	local descriptionLabel = Create("TextLabel", {
+		Name = "description",
+		Font = Enum.Font.Gotham,
+		RichText = true,
+		Text = cfg.Description,
+		TextColor3 = Color3.fromRGB(154, 154, 154),
+		TextSize = 14,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0, 20),
+		Size = UDim2.new(1, 0, 0, 16),
+		Visible = true,
+		Parent = Colorpicker.Frame,
+	})
+
+	-- ColorFrame
+	local boxcolor = Create("Frame", {
+		AnchorPoint = Vector2.new(1, 0),
+		BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(0, 30, 0, 30),
+		Visible = true,
+		Parent = Colorpicker.Frame,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 6),
+			Archivable = true,
+		}),
+	})
+
+	local colorpicker_frame = Create("TextButton", {
+		AutoButtonColor = false,
+		Text = "",
+		ZIndex = 20,
+		-- AnchorPoint = Vector2.new(1, 0),
+		BackgroundColor3 = Color3.fromRGB(9, 9, 11),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0, 46),
+		Size = UDim2.new(1, 0, 0, 166),
+		Visible = false,
+		Parent = Colorpicker.Frame,
+	}, {
+		Create("UIPadding", {
+			PaddingBottom = UDim.new(0, 6),
+			PaddingLeft = UDim.new(0, 6),
+			PaddingRight = UDim.new(0, 6),
+			PaddingTop = UDim.new(0, 6),
+			Archivable = true,
+		}),
+		-- Create("UICorner", {
+		-- 	CornerRadius = UDim.new(0, 6),
+		-- 	Archivable = true,
+		-- }),
+		-- Create("UIStroke", {
+		-- 	ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		-- 	Color = Color3.fromRGB(39, 39, 42),
+		-- 	Enabled = true,
+		-- 	LineJoinMode = Enum.LineJoinMode.Round,
+		-- 	Thickness = 1,
+		-- 	Archivable = true,
+		-- }),
+	})
+
+	local color = Create("ImageLabel", {
+		Image = "rbxassetid://4155801252",
+		BackgroundColor3 = Color3.fromRGB(255, 0, 4),
+		Size = UDim2.new(1, -10, 0, 127),
+		Visible = true,
+		ZIndex = 10,
+		Parent = colorpicker_frame,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 8),
+			Archivable = true,
+		}),
+	})
+
+	local color_selection = Create("Frame", {
+		BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Size = UDim2.new(0, 12, 0, 12),
+		Visible = true,
+		Parent = color,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(1, 0),
+			Archivable = true,
+		}),
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+			Color = Color3.fromRGB(255, 255, 255),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1.2000000476837158,
+			Archivable = true,
+		}),
+	})
+
+	local hue = Create("ImageLabel", {
+		AnchorPoint = Vector2.new(1, 0),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		Position = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(0, 6, 0, 127),
+		Visible = true,
+		Parent = colorpicker_frame,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 9),
+			Archivable = true,
+		}),
+		Create("UIGradient", {
+			Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 4)),
+				ColorSequenceKeypoint.new(0.20, Color3.fromRGB(234, 255, 0)),
+				ColorSequenceKeypoint.new(0.40, Color3.fromRGB(21, 255, 0)),
+				ColorSequenceKeypoint.new(0.60, Color3.fromRGB(0, 255, 255)),
+				ColorSequenceKeypoint.new(0.80, Color3.fromRGB(0, 17, 255)),
+				ColorSequenceKeypoint.new(0.90, Color3.fromRGB(255, 0, 251)),
+				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 4)),
+			}),
+			Enabled = true,
+			Offset = Vector2.new(0, 0),
+			Rotation = 270,
+			Archivable = true,
+		}),
+	})
+
+	local hue_selection = Create("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0.48, 0, 1 - select(1, Color3.toHSV(preset))),
+		Size = UDim2.new(0, 8, 0, 8),
+		Visible = true,
+		Parent = hue,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(1, 0),
+			Archivable = true,
+		}),
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
+			Color = Color3.fromRGB(255, 255, 255),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1.2000000476837158,
+			Archivable = true,
+		}),
+	})
+
+	local rainbowtoggle = Create("TextButton", {
+		Font = Enum.Font.SourceSans,
+		Text = "",
+		TextColor3 = Color3.fromRGB(0, 0, 0),
+		TextSize = 14,
+		AnchorPoint = Vector2.new(0, 1),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 1, 0),
+		Size = UDim2.new(1, 0, 0, 16),
+		Visible = true,
+		Parent = colorpicker_frame,
+	})
+
+	local togglebox = Create("Frame", {
+		BackgroundColor3 = Color3.fromRGB(250, 250, 250),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Size = UDim2.new(0, 16, 0, 16),
+		Visible = true,
+		Parent = rainbowtoggle,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 5),
+			Archivable = true,
+		}),
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(250, 250, 250),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+
+		Create("ImageLabel", {
+			Image = "http://www.roblox.com/asset/?id=6031094667",
+			ImageColor3 = Color3.fromRGB(9, 9, 11),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundTransparency = 1,
+			BorderColor3 = Color3.fromRGB(0, 0, 0),
+			BorderSizePixel = 0,
+			Position = UDim2.new(0.5, 0, 0.5, 0),
+			Size = UDim2.new(0, 12, 0, 12),
+			Visible = true,
+		}),
+		Create("TextLabel", {
+			Font = Enum.Font.Gotham,
+			Text = "Rainbow",
+			TextColor3 = Color3.fromRGB(234, 234, 234),
+			TextSize = 14,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundTransparency = 1,
+			BorderColor3 = Color3.fromRGB(0, 0, 0),
+			BorderSizePixel = 0,
+			Position = UDim2.new(0, 26, 0, 0),
+			Size = UDim2.new(1, 0, 0, 16),
+			Visible = true,
+		}),
+	})
+
+	local function UpdateColorPicker()
+		local newColor
+		newColor = Color3.fromHSV(ColorH, ColorS, ColorV)
+		boxcolor.BackgroundColor3 = newColor
+		color.BackgroundColor3 = Color3.fromHSV(ColorH, 1, 1)
+		color_selection.BackgroundColor3 = newColor
+		cfg.Callback(newColor)
+	end
+
+	local function UpdateColorPickerPosition()
+		local ColorX = math.clamp(mouse.X - color.AbsolutePosition.X, 0, color.AbsoluteSize.X)
+		local ColorY = math.clamp(mouse.Y - color.AbsolutePosition.Y, 0, color.AbsoluteSize.Y)
+		color_selection.Position = UDim2.new(ColorX / color.AbsoluteSize.X, 0, ColorY / color.AbsoluteSize.Y, 0)
+		ColorS = ColorX / color.AbsoluteSize.X
+		ColorV = 1 - (ColorY / color.AbsoluteSize.Y)
+		UpdateColorPicker()
+	end
+
+	local function UpdateHuePickerPosition()
+		local HueY = math.clamp(mouse.Y - hue.AbsolutePosition.Y, 0, hue.AbsoluteSize.Y)
+		hue_selection.Position = UDim2.new(0.5, 0, HueY / hue.AbsoluteSize.Y, 0)
+		ColorH = HueY / hue.AbsoluteSize.Y
+		UpdateColorPicker()
+	end
+
+	AddConnection(color.InputBegan, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if RainbowColorPicker then
+				return
+			end
+			if ColorInput then
+				ColorInput:Disconnect()
+			end
+			ColorInput = AddConnection(mouse.Move, UpdateColorPickerPosition)
+			UpdateColorPickerPosition()
+		end
+	end)
+
+	AddConnection(color.InputEnded, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if ColorInput then
+				ColorInput:Disconnect()
+				ColorInput = nil  -- Clear the connection
+			end
+		end
+	end)
+
+	AddConnection(hue.InputBegan, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if RainbowColorPicker then
+				return
+			end
+			if HueInput then
+				HueInput:Disconnect()
+			end
+			HueInput = AddConnection(mouse.Move, UpdateHuePickerPosition)
+			UpdateHuePickerPosition()
+		end
+	end)
+
+	AddConnection(hue.InputEnded, function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if HueInput then
+				HueInput:Disconnect()
+				HueInput = nil  -- Clear the connection
+			end
+		end
+	end)
+
+	AddConnection(Colorpicker.Frame.MouseButton1Click, function()
+		Colorpicker.ColorpickerToggle = not Colorpicker.ColorpickerToggle
+		colorpicker_frame.Visible = Colorpicker.ColorpickerToggle
+	end)
+
+	AddConnection(rainbowtoggle.MouseButton1Click, function()
+		RainbowColorPicker = not RainbowColorPicker
+		Colorpicker.RainbowMode = RainbowColorPicker  -- Update the Colorpicker table
+		TweenService:Create(
+			togglebox,
+			TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ BackgroundTransparency = RainbowColorPicker and 0 or 1 }
+		):Play()
+		if RainbowColorPicker then
+			local function UpdateRainbowColor()
+				while RainbowColorPicker do
+					-- boxcolor.BackgroundColor3 = Color3.fromHSV(lib.RainbowColorValue, 1, 1)
+                    -- color.BackgroundColor3 = Color3.fromHSV(lib.RainbowColorValue, 1, 1)
+					ColorH, ColorS, ColorV = lib.RainbowColorValue, 1, 1
+					-- ColorH = lib.RainbowColorValue
+					hue_selection.Position = UDim2.new(0.5, 0, 0, lib.HueSelectionPosition)
+					color_selection.Position = UDim2.new(1, 0, 0, 0)
+					UpdateColorPicker()
+					wait()
+				end
+			end
+			coroutine.wrap(UpdateRainbowColor)()
+		end
+	end)
+
+	function Colorpicker:Set(newColor)
+		ColorH, ColorS, ColorV = Color3.toHSV(newColor)
+		boxcolor.BackgroundColor3 = newColor
+		color_selection.Position = UDim2.new(ColorS, 0, 1 - ColorV, 0)
+		hue_selection.Position = UDim2.new(0.5, 0, ColorH, 0)
+		UpdateColorPicker()
+	end
+
+	return Colorpicker
+end
+
+return Element
+end)() end,
+    [8] = function()local wax,script,require=ImportGlobals(8)local ImportGlobals return (function(...)local Element = {}
+Element.__index = Element
+Element.__type = "Dropdown"
+local Tools = require(script.Parent.Parent.tools)
+
+local Create = Tools.Create
+local AddConnection = Tools.AddConnection
+
+local TweenService = game:GetService("TweenService")
+
+function Element:New(cfg)
+	cfg.Title = cfg.Title or "Title"
+	cfg.Description = cfg.Description or "Description"
+
+	cfg.Options = cfg.Options or {}
+	cfg.Default = cfg.Default or ""
+	cfg.IgnoreFirst = cfg.IgnoreFirst or false
+	cfg.Multiple = cfg.Multiple or false
+	cfg.MaxOptions = cfg.MaxOptions or math.huge
+	cfg.Callback = cfg.Callback or function() end
+
+	local Dropdown = { Value = cfg.Default, Options = cfg.Options, Buttons = {}, Toggled = false, Type = "Dropdown" }
+	local MaxElements = 5
+
+	Dropdown.Frame = Create("TextButton", {
+		Name = cfg.Title,
+		Font = Enum.Font.SourceSans,
+		Text = "",
+		TextTransparency = 1,
+		TextColor3 = Color3.fromRGB(0, 0, 0),
+		TextSize = 14,
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0.519230783, 0),
+		Size = UDim2.new(1, 0, 0, 40),
+		Visible = true,
+		Parent = self.Container,
+	}, {
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(21, 21, 24),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+		Create("UIPadding", {
+			PaddingBottom = UDim.new(0, 10),
+			PaddingLeft = UDim.new(0, 14),
+			PaddingRight = UDim.new(0, 14),
+			PaddingTop = UDim.new(0, 10),
+			Archivable = true,
+		}),
+	})
+	Dropdown.Frame:SetAttribute("description", cfg.Description)
+
+	local titleLabel = Create("TextLabel", {
+		Name = "name",
+		Font = Enum.Font.Gotham,
+		Text = cfg.Title,
+		RichText = true,
+		TextColor3 = Color3.fromRGB(234, 234, 234),
+		TextSize = 14,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, 16),
+		Visible = true,
+		Parent = Dropdown.Frame,
+	})
+
+	local descriptionLabel = Create("TextLabel", {
+		Name = "description",
+		Font = Enum.Font.Gotham,
+		RichText = true,
+		Text = cfg.Description,
+		TextColor3 = Color3.fromRGB(154, 154, 154),
+		TextSize = 14,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0, 102),
+		Size = UDim2.new(1, 0, 0, 16),
+		Visible = true,
+		Parent = Dropdown.Frame,
+	})
+
+	local drop_frame = Create("Frame", {
+		BackgroundColor3 = Color3.fromRGB(9, 9, 11),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		LayoutOrder = 1,
+		Position = UDim2.new(0, 0, 0, 24),
+		Size = UDim2.new(1, 0, 0, 71),
+		Visible = true,
+		Parent = Dropdown.Frame,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 6),
+			Archivable = true,
+		}),
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(39, 39, 42),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+	})
+
+	local text_box = Create("TextBox", {
+		Font = Enum.Font.Gotham,
+		PlaceholderText = "Search Item...",
+		Text = "",
+		TextColor3 = Color3.fromRGB(239, 239, 239),
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		AnchorPoint = Vector2.new(0, 1),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		LayoutOrder = 2,
+		Position = UDim2.new(0, 0, 1, 0),
+		Size = UDim2.new(1, 0, 0, 34),
+		Visible = true,
+		Parent = drop_frame,
+	}, {
+		Create("UIPadding", {
+			PaddingBottom = UDim.new(0, 0),
+			PaddingLeft = UDim.new(0, 10),
+			PaddingRight = UDim.new(0, 10),
+			PaddingTop = UDim.new(0, 0),
+			Archivable = true,
+		}),
+	})
+
+	local line = Create("Frame", {
+		BackgroundColor3 = Color3.fromRGB(21, 21, 24),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		LayoutOrder = 1,
+		Position = UDim2.new(0, 0, 0, 37),
+		Size = UDim2.new(1, 0, 0, 1),
+		Visible = true,
+		Parent = drop_frame,
+	})
+
+	local tagsbox = Create("ScrollingFrame", {
+		AutomaticCanvasSize = Enum.AutomaticSize.X,
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		ScrollBarImageColor3 = Color3.fromRGB(0, 0, 0),
+		ScrollBarThickness = 2,
+		Active = true,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, 36),
+		Visible = true,
+		Parent = drop_frame,
+	}, {
+		Create("UIPadding", {
+			PaddingBottom = UDim.new(0, 0),
+			PaddingLeft = UDim.new(0, 8),
+			PaddingRight = UDim.new(0, 8),
+			PaddingTop = UDim.new(0, 0),
+			Archivable = true,
+		}),
+		Create("UIListLayout", {
+			Padding = UDim.new(0, 8),
+			FillDirection = Enum.FillDirection.Horizontal,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+		}),
+	})
+
+	local dropcont = Create("TextButton", {
+		Text = "",
+		AutoButtonColor = false,
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(9, 9, 11),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0, 80),
+		Size = UDim2.new(1, 0, 0, 0),
+		Visible = false,
+		Parent = drop_frame,
+	}, {
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(39, 39, 42),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 6),
+			Archivable = true,
+		}),
+		Create("UIPadding", {
+			PaddingBottom = UDim.new(0, 10),
+			PaddingLeft = UDim.new(0, 10),
+			PaddingRight = UDim.new(0, 10),
+			PaddingTop = UDim.new(0, 10),
+			Archivable = true,
+		}),
+		Create("UIListLayout", {
+			Padding = UDim.new(0, 4),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+
+	AddConnection(text_box.Focused, function()
+		Dropdown.Toggled = true
+		dropcont.Visible = true
+	end)
+	AddConnection(Dropdown.Frame.MouseButton1Click, function()
+		Dropdown.Toggled = not Dropdown.Toggled
+		dropcont.Visible = Dropdown.Toggled
+	end)
+	function SearchOptions()
+		local searchText = string.lower(text_box.Text)
+		for _, v in ipairs(dropcont:GetChildren()) do
+			if v:IsA("TextButton") then
+				local buttonText = string.lower(v.TextLabel.Text)
+				if string.find(buttonText, searchText) then
+					v.Visible = true
+				else
+					v.Visible = false
+				end
+			end
+		end
+	end	
+
+	AddConnection(text_box.Changed, SearchOptions)
+
+	local function AddOptions(Options)
+		for _, Option in pairs(Options) do
+			local check = Create("ImageLabel", {
+				Image = "rbxassetid://15269180838",
+				ImageColor3 = Color3.fromRGB(154, 154, 154),
+				ImageRectOffset = Vector2.new(514, 257),
+				ImageRectSize = Vector2.new(256, 256),
+				AnchorPoint = Vector2.new(1, 0.5),
+				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+				BackgroundTransparency = 1,
+				BorderColor3 = Color3.fromRGB(0, 0, 0),
+				BorderSizePixel = 0,
+				Position = UDim2.new(1, -9, 0.5, 0),
+				Size = UDim2.new(0, 14, 0, 14),
+				Visible = true,
+			})
+
+			local text_label_2 = Create("TextLabel", {
+				Font = Enum.Font.Gotham,
+				Text = Option,
+				LineHeight = 0,
+				TextColor3 = Color3.fromRGB(154, 154, 154),
+				TextSize = 14,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+				BackgroundTransparency = 1,
+				BorderColor3 = Color3.fromRGB(0, 0, 0),
+				BorderSizePixel = 0,
+				Size = UDim2.new(1, 0, 1, 0),
+				Visible = true,
+			}, {
+				Create("UIPadding", {
+					PaddingBottom = UDim.new(0, 0),
+					PaddingLeft = UDim.new(0, 14),
+					PaddingRight = UDim.new(0, 0),
+					PaddingTop = UDim.new(0, 0),
+					Archivable = true,
+				}),
+			})
+
+			local dropbtn = Create("TextButton", {
+				Font = Enum.Font.SourceSans,
+				Text = "",
+				TextColor3 = Color3.fromRGB(0, 0, 0),
+				TextSize = 14,
+				BackgroundColor3 = Color3.fromRGB(39, 39, 42),
+				BackgroundTransparency = 1,
+				BorderColor3 = Color3.fromRGB(0, 0, 0),
+				BorderSizePixel = 0,
+				Size = UDim2.new(1, 0, 0, 30),
+				Visible = true,
+				Parent = dropcont,
+			}, {
+				Create("UICorner", {
+					CornerRadius = UDim.new(0, 6),
+					Archivable = true,
+				}),
+				text_label_2,
+				check,
+			})
+
+			AddConnection(dropbtn.MouseButton1Click, function()
+				Dropdown:Set(Option)
+				if cfg.Multiple ~= true then
+					Dropdown.Toggled = false
+					dropcont.Visible = false
+				end
+			end)
+
+			Dropdown.Buttons[Option] = dropbtn
+		end
+	end
+
+	function Dropdown:Refresh(Options, Delete)
+		if Delete then
+			for _, v in pairs(Dropdown.Buttons) do
+				v:Destroy()
+			end
+			Dropdown.Buttons = {}
+		end
+		Dropdown.Options = Options
+		AddOptions(Dropdown.Options)
+	end
+
+	function Dropdown:Set(Value, ignore)
+		local function updateButtonTransparency(button, isSelected)
+			local transparency = isSelected and 0 or 1
+			local textTransparency = isSelected and Color3.fromHex("9a9a9a") or Color3.fromHex("#e9e9e9")
+			TweenService:Create(
+				button,
+				TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ BackgroundTransparency = transparency }
+			):Play()
+			TweenService:Create(
+				button.ImageLabel,
+				TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ ImageTransparency = transparency }
+			):Play()
+			TweenService:Create(
+				button.TextLabel,
+				TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ TextColor3 = textTransparency }
+			):Play()
+		end
+
+		local function clearValueText()
+			for _, label in pairs(tagsbox:GetChildren()) do
+				if label:IsA("TextButton") then
+					label:Destroy()
+				end
+			end
+		end
+
+		local function addValueText(text)
+			local text_label = Create("TextLabel", {
+				Font = Enum.Font.Gotham,
+				TextColor3 = Color3.fromRGB(235, 235, 235),
+				TextSize = 12,
+				Text = text,
+				AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+				BackgroundTransparency = 1,
+				BorderColor3 = Color3.fromRGB(0, 0, 0),
+				BorderSizePixel = 0,
+				Size = UDim2.new(0, 10, 1, 0),
+				Visible = true,
+			})
+
+			-- local clesebtnholder = Create("TextButton", {
+			-- 	Font = Enum.Font.SourceSans,
+			-- 	Text = "",
+			-- 	TextColor3 = Color3.fromRGB(0, 0, 0),
+			-- 	TextSize = 14,
+			-- 	AnchorPoint = Vector2.new(1, 0),
+			-- 	BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			-- 	BackgroundTransparency = 1,
+			-- 	BorderColor3 = Color3.fromRGB(0, 0, 0),
+			-- 	BorderSizePixel = 0,
+			-- 	Position = UDim2.new(1, -10, 0, 12),
+			-- 	Size = UDim2.new(0, 16, 0, 16),
+			-- 	Visible = true,
+			-- }, {
+			-- 	Create("UICorner", {
+			-- 		CornerRadius = UDim.new(1, 0),
+			-- 		Archivable = true,
+			-- 	}),
+			-- 	Create("ImageLabel", {
+			-- 		Image = "rbxassetid://15269329696",
+			-- 		ImageColor3 = Color3.fromRGB(200, 200, 200),
+			-- 		ImageRectOffset = Vector2.new(0, 514),
+			-- 		ImageRectSize = Vector2.new(256, 256),
+			-- 		AnchorPoint = Vector2.new(0.5, 0.5),
+			-- 		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			-- 		BackgroundTransparency = 1,
+			-- 		BorderColor3 = Color3.fromRGB(0, 0, 0),
+			-- 		BorderSizePixel = 0,
+			-- 		Position = UDim2.new(0.5, 0, 0.5, 0),
+			-- 		Size = UDim2.new(0, 12, 0, 12),
+			-- 		Visible = true,
+			-- 	}),
+			-- })
+
+			local tag = Create("TextButton", {
+				Font = Enum.Font.SourceSans,
+				Text = "",
+				TextColor3 = Color3.fromRGB(0, 0, 0),
+				TextSize = 14,
+				AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundColor3 = Color3.fromRGB(39, 39, 42),
+				BorderColor3 = Color3.fromRGB(0, 0, 0),
+				BorderSizePixel = 0,
+				Size = UDim2.new(0, 0, 0, 24),
+				Visible = true,
+				Parent = tagsbox,
+			}, {
+				Create("UIPadding", {
+					PaddingBottom = UDim.new(0, 0),
+					PaddingLeft = UDim.new(0, 10),
+					PaddingRight = UDim.new(0, 8),
+					PaddingTop = UDim.new(0, 0),
+					Archivable = true,
+				}),
+				Create("UICorner", {
+					CornerRadius = UDim.new(1, 0),
+					Archivable = true,
+				}),
+				Create("UIListLayout", {
+					Padding = UDim.new(0, 6),
+					FillDirection = Enum.FillDirection.Horizontal,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+				}),
+				text_label,
+				-- clesebtnholder,
+			})
+		end
+
+		if cfg.Multiple then
+			if type(Dropdown.Value) ~= "table" then
+				Dropdown.Value = { Dropdown.Value }
+			end
+			local index = table.find(Dropdown.Value, Value)
+			if index then
+				table.remove(Dropdown.Value, index)
+			else
+				if #Dropdown.Value < (cfg.MaxOptions or math.huge) then
+					table.insert(Dropdown.Value, Value)
+				end
+			end
+		else
+			Dropdown.Value = Value
+		end
+
+		local found = cfg.Multiple or table.find(Dropdown.Options, Value)
+		if cfg.Multiple then
+			for i = #Dropdown.Value, 1, -1 do
+				if not table.find(Dropdown.Options, Dropdown.Value[i]) then
+					table.remove(Dropdown.Value, i)
+				end
+			end
+			found = #Dropdown.Value > 0
+		end
+
+		clearValueText()
+
+		if not found then
+			Dropdown.Value = cfg.Multiple and {} or "..."
+			addValueText("Select Something For Start...")
+			for _, button in pairs(Dropdown.Buttons) do
+				updateButtonTransparency(button, false)
+			end
+			return
+		end
+
+		if cfg.Multiple then
+			for _, val in ipairs(Dropdown.Value) do
+				addValueText(val)
+			end
+		else
+			addValueText(Dropdown.Value)
+		end
+
+		for i, button in pairs(Dropdown.Buttons) do
+			local isSelected = (cfg.Multiple and table.find(Dropdown.Value, i)) or (not cfg.Multiple and i == Value)
+			updateButtonTransparency(button, isSelected)
+		end
+
+		if not ignore then
+			cfg.Callback(Dropdown.Value)
+		end
+	end
+
+	Dropdown:Refresh(Dropdown.Options, false)
+	Dropdown:Set(Dropdown.Value, cfg.IgnoreFirst)
+	return Dropdown
+end
+
+return Element
+end)() end,
+    [9] = function()local wax,script,require=ImportGlobals(9)local ImportGlobals return (function(...)local Element = {}
+Element.__index = Element
+Element.__type = "Paragraph"
+local Tools = require(script.Parent.Parent.tools)
+
+local Create = Tools.Create
+
+function Element:New(cfg)
+    cfg.Title = cfg.Title or "Title"
+	cfg.Description = cfg.Description or "Description"
+    local Paragraph = {}
+
+    Paragraph.Frame = Create("TextButton", {
+        Name = cfg.Title,
+        Font = Enum.Font.SourceSans,
+        Text = "",
+        TextTransparency = 1,
+        TextColor3 = Color3.fromRGB(0,0,0),
+        TextSize = 14,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BackgroundTransparency = 1,
+        BorderColor3 = Color3.fromRGB(0,0,0),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0.519230783, 0),
+        Size = UDim2.new(1, 0, 0, 40),
+        Visible = true,
+        Parent = self.Container,
+    }, {
+        Create("UIStroke", {
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            Color = Color3.fromRGB(21,21,24),
+            Enabled = true,
+            LineJoinMode = Enum.LineJoinMode.Round,
+            Thickness = 1,
+            Archivable = true,
+        }),
+        Create("UIPadding", {
+            PaddingBottom = UDim.new(0, 10),
+            PaddingLeft = UDim.new(0, 14),
+            PaddingRight = UDim.new(0, 14),
+            PaddingTop = UDim.new(0, 10),
+            Archivable = true,
+        }),
+    })
+    Paragraph.Frame:SetAttribute("description", cfg.Description)
+    
+    local titleLabel = Create("TextLabel", {
+        Name = "name",
+        Font = Enum.Font.Gotham,
+        Text = cfg.Title,
+        RichText = true,
+        TextColor3 = Color3.fromRGB(234,234,234),
+        TextSize = 14,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BackgroundTransparency = 1,
+        BorderColor3 = Color3.fromRGB(0,0,0),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 16),
+        Visible = true,
+        Parent = Paragraph.Frame,
+    })
+    
+    local descriptionLabel = Create("TextLabel", {
+        Name = "description",
+        Font = Enum.Font.Gotham,
+        RichText = true,
+        Text = cfg.Description,
+        TextColor3 = Color3.fromRGB(154,154,154),
+        TextSize = 14,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BackgroundTransparency = 1,
+        BorderColor3 = Color3.fromRGB(0,0,0),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 20),
+        Size = UDim2.new(1, 0, 0, 16),
+        Visible = true,
+        Parent = Paragraph.Frame,
+    })
+
+    function Paragraph:Set(cfgs)
+        cfgs.Title = cfgs.Title or cfg.Title
+        cfgs.Description = cfgs.Description or cfg.Description
+
+        Paragraph.Frame.Name = cfgs.Title
+        Paragraph.Frame:SetAttribute("description", cfgs.Description)
+        titleLabel.Text = cfgs.Title
+        descriptionLabel.Text = cfgs.Description
+    end
+
+    return Paragraph
+end
+
+return Element
+end)() end,
+    [10] = function()local wax,script,require=ImportGlobals(10)local ImportGlobals return (function(...)local Element = {}
+Element.__index = Element
+Element.__type = "Slider"
+local Tools = require(script.Parent.Parent.tools)
+
+local Create = Tools.Create
+local AddConnection = Tools.AddConnection
+
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local function Round(Number, Factor)
+	local Result = math.floor(Number / Factor + (math.sign(Number) * 0.5)) * Factor
+	if Result < 0 then
+		Result = Result + Factor
+	end
+	return Result
+end
+
+function Element:New(cfg)
+	cfg.Title = cfg.Title or "Title"
+	cfg.Description = cfg.Description or "Description"
+
+	local title, description = cfg.Title, cfg.Description
+
+	cfg.Min = cfg.Min or 10
+	cfg.Max = cfg.Max or 20
+	cfg.Increment = cfg.Increment or 1
+	cfg.Default = cfg.Default or 0
+	cfg.IgnoreFirst = cfg.IgnoreFirst or false
+
+	cfg.Callback = cfg.Callback or function() end
+
+    local Dragging = false
+
+	local Slider = {}
+
+	Slider.Frame = Create("TextButton", {
+		Name = title,
+		Font = Enum.Font.SourceSans,
+		Text = "",
+		TextTransparency = 1,
+		TextColor3 = Color3.fromRGB(0, 0, 0),
+		TextSize = 14,
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0.519230783, 0),
+		Size = UDim2.new(1, 0, 0, 40),
+		Visible = true,
+		Parent = self.Container,
+	}, {
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(21, 21, 24),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+		Create("UIPadding", {
+			PaddingBottom = UDim.new(0, 10),
+			PaddingLeft = UDim.new(0, 14),
+			PaddingRight = UDim.new(0, 14),
+			PaddingTop = UDim.new(0, 10),
+			Archivable = true,
+		}),
+	})
+	Slider.Frame:SetAttribute("description", description)
+
+	local ValueText = Create("TextLabel", {
+		Font = Enum.Font.Gotham,
+		RichText = true,
+		Text = `{cfg.Default}<font transparency="0.5">/{cfg.Max}</font>`,
+		TextColor3 = Color3.fromRGB(234, 234, 234),
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		AnchorPoint = Vector2.new(1, 0),
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(0, 90, 0, 16),
+		Visible = true,
+		Parent = Slider.Frame,
+	})
+
+	local titleLabel = Create("TextLabel", {
+		Name = "name",
+		Font = Enum.Font.Gotham,
+		Text = title,
+		RichText = true,
+		TextColor3 = Color3.fromRGB(234, 234, 234),
+		TextSize = 14,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, 16),
+		Visible = true,
+		Parent = Slider.Frame,
+	})
+
+	local descriptionLabel = Create("TextLabel", {
+		Name = "description",
+		Font = Enum.Font.Gotham,
+		RichText = true,
+		Text = description,
+		TextColor3 = Color3.fromRGB(154, 154, 154),
+		TextSize = 14,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0, 38),
+		Size = UDim2.new(1, 0, 0, 16),
+		Visible = true,
+		Parent = Slider.Frame,
+	})
+
+	local SliderProgress = Create("Frame", {
+		AnchorPoint = Vector2.new(0, 0.5),
+		BackgroundColor3 = Color3.fromRGB(250, 250, 250),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0.5, 0),
+		Size = UDim2.new(0, 0, 1, 0),
+		Visible = true,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 2),
+			Archivable = true,
+		}),
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(21, 21, 24),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+	})
+
+	local SliderDot = Create("Frame", {
+		-- AnchorPoint = Vector2.new(1, 0.5),
+		BackgroundColor3 = Color3.fromRGB(9, 9, 11),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		-- Position = UDim2.new(1, 5, 0.5, 0),
+        -- Position = UDim2.new(0.5, 0, 0.5, 0),
+		Size = UDim2.new(0, 10, 0, 10),
+		Visible = true,
+	}, {
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(250, 250, 250),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+		Create("UICorner", {
+			CornerRadius = UDim.new(1, 0),
+			Archivable = true,
+		}),
+	})
+
+	local SliderBar = Create("Frame", {
+		AnchorPoint = Vector2.new(0.5, 0),
+		BackgroundColor3 = Color3.fromRGB(39, 39, 42),
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0.5, 0, 0, 27),
+		Size = UDim2.new(1, 0, 0, 2),
+		Visible = true,
+		Parent = Slider.Frame,
+	}, {
+		Create("UICorner", {
+			CornerRadius = UDim.new(0, 2),
+			Archivable = true,
+		}),
+		SliderProgress,
+		SliderDot,
+	})
+
+	function Slider:Set(Value, ignore)
+		self.Value = math.clamp(Round(Value, cfg.Increment), cfg.Min, cfg.Max)
+		ValueText.Text = `{tostring(self.Value)}<font transparency="0.5">/{cfg.Max} </font>`
+		TweenService:Create(SliderDot, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = UDim2.new((self.Value - cfg.Min) / (cfg.Max - cfg.Min), -5, 0.5, -5),
+		}):Play()
+		TweenService:Create(
+			SliderProgress,
+			TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ Size = UDim2.fromScale((self.Value - cfg.Min) / (cfg.Max - cfg.Min), 1) }
+		):Play()
+		if not ignore then
+			return cfg.Callback(self.Value)
+		end
+	end
+
+	AddConnection(SliderDot.InputBegan, function(Input)
+		if
+			Input.UserInputType == Enum.UserInputType.MouseButton1
+			or Input.UserInputType == Enum.UserInputType.Touch
+		then
+			Dragging = true
+		end
+	end)
+
+	AddConnection(SliderDot.InputEnded, function(Input)
+		if
+			Input.UserInputType == Enum.UserInputType.MouseButton1
+			or Input.UserInputType == Enum.UserInputType.Touch
+		then
+			Dragging = false
+		end
+	end)
+
+	AddConnection(UserInputService.InputChanged, function(Input)
+		if
+			Dragging
+			and (
+				Input.UserInputType == Enum.UserInputType.MouseMovement
+				or Input.UserInputType == Enum.UserInputType.Touch
+			)
+		then
+			local SizeScale =
+				math.clamp((Input.Position.X - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X, 0, 1)
+			Slider:Set(cfg.Min + ((cfg.Max - cfg.Min) * SizeScale))
+		end
+	end)
+
+	Slider:Set(cfg.Default, cfg.IgnoreFirst)
+	return Slider
+end
+
+return Element
+end)() end,
+    [11] = function()local wax,script,require=ImportGlobals(11)local ImportGlobals return (function(...)local Element = {}
+Element.__index = Element
+Element.__type = "Toggle"
+local Tools = require(script.Parent.Parent.tools)
+
+local TweenService = game:GetService("TweenService")
+
+local Create = Tools.Create
+local AddConnection = Tools.AddConnection
+
+function Element:New(cfg)
+	cfg.Title = cfg.Title or "Title"
+	cfg.Description = cfg.Description or "Description"
+
+	local title, description = cfg.Title, cfg.Description
+
+    cfg.Default = cfg.Default or false
+    cfg.IgnoreFirst = cfg.IgnoreFirst or false
+    cfg.Callback = cfg.Callback or function() end
+
+    local Toggle = {Value = cfg.Default}
+
+    Toggle.Frame = Create("TextButton", {
+        Name = title,
+        Font = Enum.Font.SourceSans,
+        Text = "",
+        TextTransparency = 1,
+        TextColor3 = Color3.fromRGB(0,0,0),
+        TextSize = 14,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BackgroundTransparency = 1,
+        BorderColor3 = Color3.fromRGB(0,0,0),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0.519230783, 0),
+        Size = UDim2.new(1, 0, 0, 40),
+        Visible = true,
+        Parent = self.Container,
+    }, {
+        Create("UIStroke", {
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            Color = Color3.fromRGB(21,21,24),
+            Enabled = true,
+            LineJoinMode = Enum.LineJoinMode.Round,
+            Thickness = 1,
+            Archivable = true,
+        }),
+        Create("UIPadding", {
+            PaddingBottom = UDim.new(0, 10),
+            PaddingLeft = UDim.new(0, 14),
+            PaddingRight = UDim.new(0, 14),
+            PaddingTop = UDim.new(0, 10),
+            Archivable = true,
+        }),
+    })
+
+    Toggle.Frame:SetAttribute("description", description)
+
+    local check_box = Create("TextButton", {
+        BackgroundColor3 = Color3.fromRGB(250,250,250),
+        BorderColor3 = Color3.fromRGB(0,0,0),
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, 16, 0, 16),
+        Visible = true,
+        Text = "",
+        Parent = Toggle.Frame,
+    }, {
+        Create("UICorner", {
+            CornerRadius = UDim.new(0, 5),
+            Archivable = true,
+        }),
+        Create("UIStroke", {
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            Color = Color3.fromRGB(250,250,250),
+            Enabled = true,
+            LineJoinMode = Enum.LineJoinMode.Round,
+            Thickness = 1,
+            Archivable = true,
+        }),
+        Create("ImageLabel", {
+			Image = "http://www.roblox.com/asset/?id=6031094667",
+			ImageColor3 = Color3.fromRGB(9, 9, 11),
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BackgroundTransparency = 1,
+			BorderColor3 = Color3.fromRGB(0, 0, 0),
+			BorderSizePixel = 0,
+			Position = UDim2.new(0.5, 0, 0.5, 0),
+			Size = UDim2.new(0, 12, 0, 12),
+			Visible = true,
+		}),
+    })
+    
+    local titleLabel = Create("TextLabel", {
+        Name = "name",
+        Font = Enum.Font.Gotham,
+        Text = title,
+        RichText = true,
+        TextColor3 = Color3.fromRGB(234,234,234),
+        TextSize = 14,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BackgroundTransparency = 1,
+        BorderColor3 = Color3.fromRGB(0,0,0),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, -27, 0, 16),
+        Position = UDim2.new(0, 26, 0, 0),
+        Visible = true,
+        Parent = Toggle.Frame,
+    })
+    
+    local descriptionLabel = Create("TextLabel", {
+        Font = Enum.Font.Gotham,
+        Name = "description",
+        RichText = true,
+        Text = description,
+        TextColor3 = Color3.fromRGB(154,154,154),
+        TextSize = 14,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = Color3.fromRGB(255,255,255),
+        BackgroundTransparency = 1,
+        BorderColor3 = Color3.fromRGB(0,0,0),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 20),
+        Size = UDim2.new(1, 0, 0, 16),
+        Visible = true,
+        Parent = Toggle.Frame,
+    })
+
+    function Toggle:Set(Value,ignore)
+        self.Value = Value
+        TweenService:Create(check_box, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),{BackgroundTransparency = self.Value and 0 or 1}):Play()
+        if not ignore then return cfg.Callback(self.Value) end
+    end
+
+    AddConnection(Toggle.Frame.MouseButton1Up, function()
+        Toggle:Set(not Toggle.Value)
+    end)
+
+    Toggle:Set(Toggle.Value,cfg.IgnoreFirst)
+    return Toggle
+end
+
+return Element
+end)() end,
+    [12] = function()local wax,script,require=ImportGlobals(12)local ImportGlobals return (function(...)local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = game:GetService("Players").LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+local tools = { Signals = {} }
+
+-- local themes = {
+--     default = {
+-- 		font = Enum.Font.SourceSans,
+
+-- 		-- MainProps
+--         bgcolor = Color3.fromRGB(9, 9, 11),
+
+--         textcolor = Color3.fromRGB(240, 240, 240),
+-- 		disabledtextcolor = Color3.fromRGB(156, 156, 165),
+-- 		creditcolor = Color3.fromRGB(190, 190, 190),
+
+-- 		scrollcolor = Color3.fromRGB(85, 85, 85),
+
+-- 		seperatorcolor = Color3.fromRGB(21, 21, 24),
+
+-- 		primarycolor = Color3.fromRGB(250,250,250),
+
+-- 		-- dropdown
+
+--     },
+-- }
+
+-- local currentTheme = themes.default
+
+function tools.AddConnection(Signal, Function)
+	table.insert(tools.Signals, Signal:Connect(Function))
+end
+
+-- ahh im to lazy to make now themes
+function tools.Create(Name, Properties, Children)
+    local Object = Instance.new(Name)
+
+    -- if Properties.ThemeProps then
+    --     for propName, themeKey in next, Properties.ThemeProps do
+    --         if currentTheme[themeKey] then
+    --             Object[propName] = currentTheme[themeKey]
+    --         end
+    --     end
+    --     Properties.ThemeProps = nil
+    -- end
+    
+    for i, v in next, Properties or {} do
+        Object[i] = v
+    end
+    for i, v in next, Children or {} do
+        v.Parent = Object
+    end
+    return Object
+end
+
+-- function tools.SetTheme(themeName)
+--     if themes[themeName] then
+--         currentTheme = themes[themeName]
+--     else
+--         warn("Theme not found: " .. themeName)
+--     end
+-- end
+
+-- function tools.AddTheme(themeName, themeProps)
+--     themes[themeName] = themeProps
+-- end
+
+
+function tools.Ripple(Object)
+	local Circle = tools.Create("ImageLabel", {
+		Parent = Object,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		Image = "rbxassetid://266543268",
+		ImageColor3 = Color3.fromRGB(210,210,210),
+		ImageTransparency = 0.88
+	})
+	Circle.Position = UDim2.new(0, Mouse.X - Circle.AbsolutePosition.X, 0, Mouse.Y - Circle.AbsolutePosition.Y)
+	local Size = Object.AbsoluteSize.X / 1.5
+	TweenService:Create(Circle, TweenInfo.new(0.5), {Position = UDim2.fromScale(math.clamp(Mouse.X - Object.AbsolutePosition.X, 0, Object.AbsoluteSize.X)/Object.AbsoluteSize.X,Object,math.clamp(Mouse.Y - Object.AbsolutePosition.Y, 0, Object.AbsoluteSize.Y)/Object.AbsoluteSize.Y) - UDim2.fromOffset(Size/2,Size/2), ImageTransparency = 1, Size = UDim2.fromOffset(Size,Size)}):Play()
+	spawn(function()
+		wait(0.5)
+		Circle:Destroy()
+	end)
+end 
+
+function tools.MakeDraggable(DragPoint, Main)
+	pcall(function()
+		local Dragging, DragInput, MousePos, FramePos = false
+		tools.AddConnection(DragPoint.InputBegan, function(Input)
+			if
+				Input.UserInputType == Enum.UserInputType.MouseButton1
+				or Input.UserInputType == Enum.UserInputType.Touch
+			then
+				Dragging = true
+				MousePos = Input.Position
+				FramePos = Main.Position
+
+				tools.AddConnection(Input.Changed, function()
+					if Input.UserInputState == Enum.UserInputState.End then
+						Dragging = false
+					end
+				end)
+			end
+		end)
+		tools.AddConnection(DragPoint.InputChanged, function(Input)
+			if Input.UserInputType == Enum.UserInputType.MouseMovement then
+				DragInput = Input
+			end
+		end)
+		tools.AddConnection(UserInputService.InputChanged, function(Input)
+			if
+				(
+					Input.UserInputType == Enum.UserInputType.MouseMovement
+					or Input.UserInputType == Enum.UserInputType.Touch
+				) and Dragging
+			then
+				local Delta = Input.Position - MousePos
+				Main.Position = UDim2.new(
+					FramePos.X.Scale,
+					FramePos.X.Offset + Delta.X,
+					FramePos.Y.Scale,
+					FramePos.Y.Offset + Delta.Y
+				)
+			end
+		end)
+	end)
+end
+
+return tools
+end)() end
+} -- [RefId] = Closure
+
+-- Holds the actual DOM data
+local ObjectTree = {
+    {
+        1,
+        2,
+        {
+            "Shared"
+        },
+        {
+            {
+                5,
+                2,
+                {
+                    "Elements"
+                },
+                {
+                    {
+                        11,
+                        2,
+                        {
+                            "Toggle"
+                        }
+                    },
+                    {
+                        6,
+                        2,
+                        {
+                            "Button"
+                        }
+                    },
+                    {
+                        9,
+                        2,
+                        {
+                            "Paragraph"
+                        }
+                    },
+                    {
+                        10,
+                        2,
+                        {
+                            "Slider"
+                        }
+                    },
+                    {
+                        8,
+                        2,
+                        {
+                            "Dropdown"
+                        }
+                    },
+                    {
+                        7,
+                        2,
+                        {
+                            "Colorpicker"
+                        }
+                    }
+                }
+            },
+            {
+                12,
+                2,
+                {
+                    "tools"
+                }
+            },
+            {
+                2,
+                1,
+                {
+                    "Components"
+                },
+                {
+                    {
+                        3,
+                        2,
+                        {
+                            "MainWindow"
+                        }
+                    },
+                    {
+                        4,
+                        2,
+                        {
+                            "TabModule"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+-- Line offsets for debugging (only included when minifyTables is false)
+local LineOffsets = {
+    8,
+    [3] = 82,
+    [4] = 850,
+    [5] = 970,
+    [6] = 980,
+    [7] = 1096,
+    [8] = 1520,
+    [9] = 2028,
+    [10] = 2128,
+    [11] = 2375,
+    [12] = 2523
+}
+
+-- Misc AOT variable imports
+local WaxVersion = "0.4.1"
+local EnvName = "WaxRuntime"
+
+-- ++++++++ RUNTIME IMPL BELOW ++++++++ --
+
+-- Localizing certain libraries and built-ins for runtime efficiency
+local string, task, setmetatable, error, next, table, unpack, coroutine, script, type, require, pcall, tostring, tonumber, _VERSION =
+      string, task, setmetatable, error, next, table, unpack, coroutine, script, type, require, pcall, tostring, tonumber, _VERSION
+
+local table_insert = table.insert
+local table_remove = table.remove
+local table_freeze = table.freeze or function(t) return t end -- lol
+
+local coroutine_wrap = coroutine.wrap
+
+local string_sub = string.sub
+local string_match = string.match
+local string_gmatch = string.gmatch
+
+-- The Lune runtime has its own `task` impl, but it must be imported by its builtin
+-- module path, "@lune/task"
+if _VERSION and string_sub(_VERSION, 1, 4) == "Lune" then
+    local RequireSuccess, LuneTaskLib = pcall(require, "@lune/task")
+    if RequireSuccess and LuneTaskLib then
+        task = LuneTaskLib
+    end
+end
+
+local task_defer = task and task.defer
+
+-- If we're not running on the Roblox engine, we won't have a `task` global
+local Defer = task_defer or function(f, ...)
+    coroutine_wrap(f)(...)
+end
+
+-- ClassName "IDs"
+local ClassNameIdBindings = {
+    [1] = "Folder",
+    [2] = "ModuleScript",
+    [3] = "Script",
+    [4] = "LocalScript",
+    [5] = "StringValue",
+}
+
+local RefBindings = {} -- [RefId] = RealObject
+
+local ScriptClosures = {}
+local ScriptClosureRefIds = {} -- [ScriptClosure] = RefId
+local StoredModuleValues = {}
+local ScriptsToRun = {}
+
+-- wax.shared __index/__newindex
+local SharedEnvironment = {}
+
+-- We're creating 'fake' instance refs soley for traversal of the DOM for require() compatibility
+-- It's meant to be as lazy as possible
+local RefChildren = {} -- [Ref] = {ChildrenRef, ...}
+
+-- Implemented instance methods
+local InstanceMethods = {
+    GetFullName = { {}, function(self)
+        local Path = self.Name
+        local ObjectPointer = self.Parent
+
+        while ObjectPointer do
+            Path = ObjectPointer.Name .. "." .. Path
+
+            -- Move up the DOM (parent will be nil at the end, and this while loop will stop)
+            ObjectPointer = ObjectPointer.Parent
+        end
+
+        return Path
+    end},
+
+    GetChildren = { {}, function(self)
+        local ReturnArray = {}
+
+        for Child in next, RefChildren[self] do
+            table_insert(ReturnArray, Child)
+        end
+
+        return ReturnArray
+    end},
+
+    GetDescendants = { {}, function(self)
+        local ReturnArray = {}
+
+        for Child in next, RefChildren[self] do
+            table_insert(ReturnArray, Child)
+
+            for _, Descendant in next, Child:GetDescendants() do
+                table_insert(ReturnArray, Descendant)
+            end
+        end
+
+        return ReturnArray
+    end},
+
+    FindFirstChild = { {"string", "boolean?"}, function(self, name, recursive)
+        local Children = RefChildren[self]
+
+        for Child in next, Children do
+            if Child.Name == name then
+                return Child
+            end
+        end
+
+        if recursive then
+            for Child in next, Children do
+                -- Yeah, Roblox follows this behavior- instead of searching the entire base of a
+                -- ref first, the engine uses a direct recursive call
+                return Child:FindFirstChild(name, true)
+            end
+        end
+    end},
+
+    FindFirstAncestor = { {"string"}, function(self, name)
+        local RefPointer = self.Parent
+        while RefPointer do
+            if RefPointer.Name == name then
+                return RefPointer
+            end
+
+            RefPointer = RefPointer.Parent
+        end
+    end},
+
+    -- Just to implement for traversal usage
+    WaitForChild = { {"string", "number?"}, function(self, name)
+        return self:FindFirstChild(name)
+    end},
+}
+
+-- "Proxies" to instance methods, with err checks etc
+local InstanceMethodProxies = {}
+for MethodName, MethodObject in next, InstanceMethods do
+    local Types = MethodObject[1]
+    local Method = MethodObject[2]
+
+    local EvaluatedTypeInfo = {}
+    for ArgIndex, TypeInfo in next, Types do
+        local ExpectedType, IsOptional = string_match(TypeInfo, "^([^%?]+)(%??)")
+        EvaluatedTypeInfo[ArgIndex] = {ExpectedType, IsOptional}
+    end
+
+    InstanceMethodProxies[MethodName] = function(self, ...)
+        if not RefChildren[self] then
+            error("Expected ':' not '.' calling member function " .. MethodName, 2)
+        end
+
+        local Args = {...}
+        for ArgIndex, TypeInfo in next, EvaluatedTypeInfo do
+            local RealArg = Args[ArgIndex]
+            local RealArgType = type(RealArg)
+            local ExpectedType, IsOptional = TypeInfo[1], TypeInfo[2]
+
+            if RealArg == nil and not IsOptional then
+                error("Argument " .. RealArg .. " missing or nil", 3)
+            end
+
+            if ExpectedType ~= "any" and RealArgType ~= ExpectedType and not (RealArgType == "nil" and IsOptional) then
+                error("Argument " .. ArgIndex .. " expects type \"" .. ExpectedType .. "\", got \"" .. RealArgType .. "\"", 2)
+            end
+        end
+
+        return Method(self, ...)
+    end
+end
+
+local function CreateRef(className, name, parent)
+    -- `name` and `parent` can also be set later by the init script if they're absent
+
+    -- Extras
+    local StringValue_Value
+
+    -- Will be set to RefChildren later aswell
+    local Children = setmetatable({}, {__mode = "k"})
+
+    -- Err funcs
+    local function InvalidMember(member)
+        error(member .. " is not a valid (virtual) member of " .. className .. " \"" .. name .. "\"", 3)
+    end
+    local function ReadOnlyProperty(property)
+        error("Unable to assign (virtual) property " .. property .. ". Property is read only", 3)
+    end
+
+    local Ref = {}
+    local RefMetatable = {}
+
+    RefMetatable.__metatable = false
+
+    RefMetatable.__index = function(_, index)
+        if index == "ClassName" then -- First check "properties"
+            return className
+        elseif index == "Name" then
+            return name
+        elseif index == "Parent" then
+            return parent
+        elseif className == "StringValue" and index == "Value" then
+            -- Supporting StringValue.Value for Rojo .txt file conv
+            return StringValue_Value
+        else -- Lastly, check "methods"
+            local InstanceMethod = InstanceMethodProxies[index]
+
+            if InstanceMethod then
+                return InstanceMethod
+            end
+        end
+
+        -- Next we'll look thru child refs
+        for Child in next, Children do
+            if Child.Name == index then
+                return Child
+            end
+        end
+
+        -- At this point, no member was found; this is the same err format as Roblox
+        InvalidMember(index)
+    end
+
+    RefMetatable.__newindex = function(_, index, value)
+        -- __newindex is only for props fyi
+        if index == "ClassName" then
+            ReadOnlyProperty(index)
+        elseif index == "Name" then
+            name = value
+        elseif index == "Parent" then
+            -- We'll just ignore the process if it's trying to set itself
+            if value == Ref then
+                return
+            end
+
+            if parent ~= nil then
+                -- Remove this ref from the CURRENT parent
+                RefChildren[parent][Ref] = nil
+            end
+
+            parent = value
+
+            if value ~= nil then
+                -- And NOW we're setting the new parent
+                RefChildren[value][Ref] = true
+            end
+        elseif className == "StringValue" and index == "Value" then
+            -- Supporting StringValue.Value for Rojo .txt file conv
+            StringValue_Value = value
+        else
+            -- Same err as __index when no member is found
+            InvalidMember(index)
+        end
+    end
+
+    RefMetatable.__tostring = function()
+        return name
+    end
+
+    setmetatable(Ref, RefMetatable)
+
+    RefChildren[Ref] = Children
+
+    if parent ~= nil then
+        RefChildren[parent][Ref] = true
+    end
+
+    return Ref
+end
+
+-- Create real ref DOM from object tree
+local function CreateRefFromObject(object, parent)
+    local RefId = object[1]
+    local ClassNameId = object[2]
+    local Properties = object[3] -- Optional
+    local Children = object[4] -- Optional
+
+    local ClassName = ClassNameIdBindings[ClassNameId]
+
+    local Name = Properties and table_remove(Properties, 1) or ClassName
+
+    local Ref = CreateRef(ClassName, Name, parent) -- 3rd arg may be nil if this is from root
+    RefBindings[RefId] = Ref
+
+    if Properties then
+        for PropertyName, PropertyValue in next, Properties do
+            Ref[PropertyName] = PropertyValue
+        end
+    end
+
+    if Children then
+        for _, ChildObject in next, Children do
+            CreateRefFromObject(ChildObject, Ref)
+        end
+    end
+
+    return Ref
+end
+
+local RealObjectRoot = CreateRef("Folder", "[" .. EnvName .. "]")
+for _, Object in next, ObjectTree do
+    CreateRefFromObject(Object, RealObjectRoot)
+end
+
+-- Now we'll set script closure refs and check if they should be ran as a BaseScript
+for RefId, Closure in next, ClosureBindings do
+    local Ref = RefBindings[RefId]
+
+    ScriptClosures[Ref] = Closure
+    ScriptClosureRefIds[Ref] = RefId
+
+    local ClassName = Ref.ClassName
+    if ClassName == "LocalScript" or ClassName == "Script" then
+        table_insert(ScriptsToRun, Ref)
+    end
+end
+
+local function LoadScript(scriptRef)
+    local ScriptClassName = scriptRef.ClassName
+
+    -- First we'll check for a cached module value (packed into a tbl)
+    local StoredModuleValue = StoredModuleValues[scriptRef]
+    if StoredModuleValue and ScriptClassName == "ModuleScript" then
+        return unpack(StoredModuleValue)
+    end
+
+    local Closure = ScriptClosures[scriptRef]
+
+    local function FormatError(originalErrorMessage)
+        originalErrorMessage = tostring(originalErrorMessage)
+
+        local VirtualFullName = scriptRef:GetFullName()
+
+        -- Check for vanilla/Roblox format
+        local OriginalErrorLine, BaseErrorMessage = string_match(originalErrorMessage, "[^:]+:(%d+): (.+)")
+
+        if not OriginalErrorLine or not LineOffsets then
+            return VirtualFullName .. ":*: " .. (BaseErrorMessage or originalErrorMessage)
+        end
+
+        OriginalErrorLine = tonumber(OriginalErrorLine)
+
+        local RefId = ScriptClosureRefIds[scriptRef]
+        local LineOffset = LineOffsets[RefId]
+
+        local RealErrorLine = OriginalErrorLine - LineOffset + 1
+        if RealErrorLine < 0 then
+            RealErrorLine = "?"
+        end
+
+        return VirtualFullName .. ":" .. RealErrorLine .. ": " .. BaseErrorMessage
+    end
+
+    -- If it's a BaseScript, we'll just run it directly!
+    if ScriptClassName == "LocalScript" or ScriptClassName == "Script" then
+        local RunSuccess, ErrorMessage = pcall(Closure)
+        if not RunSuccess then
+            error(FormatError(ErrorMessage), 0)
+        end
+    else
+        local PCallReturn = {pcall(Closure)}
+
+        local RunSuccess = table_remove(PCallReturn, 1)
+        if not RunSuccess then
+            local ErrorMessage = table_remove(PCallReturn, 1)
+            error(FormatError(ErrorMessage), 0)
+        end
+
+        StoredModuleValues[scriptRef] = PCallReturn
+        return unpack(PCallReturn)
+    end
+end
+
+-- We'll assign the actual func from the top of this output for flattening user globals at runtime
+-- Returns (in a tuple order): wax, script, require
+function ImportGlobals(refId)
+    local ScriptRef = RefBindings[refId]
+
+    local function RealCall(f, ...)
+        local PCallReturn = {pcall(f, ...)}
+
+        local CallSuccess = table_remove(PCallReturn, 1)
+        if not CallSuccess then
+            error(PCallReturn[1], 3)
+        end
+
+        return unpack(PCallReturn)
+    end
+
+    -- `wax.shared` index
+    local WaxShared = table_freeze(setmetatable({}, {
+        __index = SharedEnvironment,
+        __newindex = function(_, index, value)
+            SharedEnvironment[index] = value
+        end,
+        __len = function()
+            return #SharedEnvironment
+        end,
+        __iter = function()
+            return next, SharedEnvironment
+        end,
+    }))
+
+    local Global_wax = table_freeze({
+        -- From AOT variable imports
+        version = WaxVersion,
+        envname = EnvName,
+
+        shared = WaxShared,
+
+        -- "Real" globals instead of the env set ones
+        script = script,
+        require = require,
+    })
+
+    local Global_script = ScriptRef
+
+    local function Global_require(module, ...)
+        local ModuleArgType = type(module)
+
+        local ErrorNonModuleScript = "Attempted to call require with a non-ModuleScript"
+        local ErrorSelfRequire = "Attempted to call require with self"
+
+        if ModuleArgType == "table" and RefChildren[module]  then
+            if module.ClassName ~= "ModuleScript" then
+                error(ErrorNonModuleScript, 2)
+            elseif module == ScriptRef then
+                error(ErrorSelfRequire, 2)
+            end
+
+            return LoadScript(module)
+        elseif ModuleArgType == "string" and string_sub(module, 1, 1) ~= "@" then
+            -- The control flow on this SUCKS
+
+            if #module == 0 then
+                error("Attempted to call require with empty string", 2)
+            end
+
+            local CurrentRefPointer = ScriptRef
+
+            if string_sub(module, 1, 1) == "/" then
+                CurrentRefPointer = RealObjectRoot
+            elseif string_sub(module, 1, 2) == "./" then
+                module = string_sub(module, 3)
+            end
+
+            local PreviousPathMatch
+            for PathMatch in string_gmatch(module, "([^/]*)/?") do
+                local RealIndex = PathMatch
+                if PathMatch == ".." then
+                    RealIndex = "Parent"
+                end
+
+                -- Don't advance dir if it's just another "/" either
+                if RealIndex ~= "" then
+                    local ResultRef = CurrentRefPointer:FindFirstChild(RealIndex)
+                    if not ResultRef then
+                        local CurrentRefParent = CurrentRefPointer.Parent
+                        if CurrentRefParent then
+                            ResultRef = CurrentRefParent:FindFirstChild(RealIndex)
+                        end
+                    end
+
+                    if ResultRef then
+                        CurrentRefPointer = ResultRef
+                    elseif PathMatch ~= PreviousPathMatch and PathMatch ~= "init" and PathMatch ~= "init.server" and PathMatch ~= "init.client" then
+                        error("Virtual script path \"" .. module .. "\" not found", 2)
+                    end
+                end
+
+                -- For possible checks next cycle
+                PreviousPathMatch = PathMatch
+            end
+
+            if CurrentRefPointer.ClassName ~= "ModuleScript" then
+                error(ErrorNonModuleScript, 2)
+            elseif CurrentRefPointer == ScriptRef then
+                error(ErrorSelfRequire, 2)
+            end
+
+            return LoadScript(CurrentRefPointer)
+        end
+
+        return RealCall(require, module, ...)
+    end
+
+    -- Now, return flattened globals ready for direct runtime exec
+    return Global_wax, Global_script, Global_require
+end
+
+for _, ScriptRef in next, ScriptsToRun do
+    Defer(LoadScript, ScriptRef)
+end
+
+-- AoT adjustment: Load init module (MainModule behavior)
+return LoadScript(RealObjectRoot:GetChildren()[1])
