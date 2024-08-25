@@ -31,23 +31,15 @@ function MainModule:IsRunning()
 	return GUI.Parent == game.Players.LocalPlayer.PlayerGui --game:GetService("CoreGui")
 end
 
--- shit rainbow colorpicker
-coroutine.wrap(
-    function()
-        while wait() do
-            MainModule.RainbowColorValue = MainModule.RainbowColorValue + 1 / 255
-            MainModule.HueSelectionPosition = MainModule.HueSelectionPosition + 1
-
-            if MainModule.RainbowColorValue >= 1 then
-                MainModule.RainbowColorValue = 0
-            end
-
-            if MainModule.HueSelectionPosition == 127 then
-                MainModule.HueSelectionPosition = 0
-            end
-        end
+-- shit rainbow colorpickerы
+local rainbowIncrement, hueIncrement, maxHuePosition = 1 / 255, 1, 127
+coroutine.wrap(function()
+    while true do
+        MainModule.RainbowColorValue = (MainModule.RainbowColorValue + rainbowIncrement) % 1
+        MainModule.HueSelectionPosition = (MainModule.HueSelectionPosition + hueIncrement) % maxHuePosition
+        wait()
     end
-)()
+end)()
 
 local Elements = {}
 Elements.__index = Elements
@@ -72,6 +64,7 @@ MainModule.Elements = Elements
 -- end
 
 function MainModule:Load(cfgs)
+	print("starting")
 	cfgs.ver = cfgs.ver or "0.0.1"
 	cfgs.name = cfgs.name or "name"
     return MainWindow.new(GUI, cfgs)
@@ -266,7 +259,7 @@ function MainWindow.new(parent, cfgs)
 		TextStrokeColor3 = Color3.fromRGB(156, 156, 164),
 		TextXAlignment = Enum.TextXAlignment.Left,
 		AnchorPoint = Vector2.new(1, 0.5),
-		-- AutomaticSize = Enum.AutomaticSize.X,
+		AutomaticSize = Enum.AutomaticSize.X,
 		BackgroundColor3 = Color3.fromRGB(39, 39, 42),
 		BackgroundTransparency = 1,
 		BorderColor3 = Color3.fromRGB(0, 0, 0),
@@ -783,10 +776,10 @@ function MainWindow.new(parent, cfgs)
 		end
 	end
 	AddConnection(searchbox.Changed, SearchElementsInTabs)
-	AddConnection(searchbox.Changed, function()
-		searchbox.Size = UDim2.new(0, searchbox.TextBounds.X + 60, 0, 30)
+	AddConnection(searchbox:GetPropertyChangedSignal("Text"), function()
+		searchbox.Size = UDim2.new(0, searchbox.TextBounds.X, 0, 30)
 	end)
-	searchbox.Size = UDim2.new(0, searchbox.TextBounds.X + 60, 0, 30)
+	searchbox.Size = UDim2.new(0, searchbox.TextBounds.X, 0, 30)
 
 	-- print(TabModule.Tabs.Container)
 	local TabModule = require(script.Parent.TabModule)
@@ -1299,13 +1292,13 @@ function Element:New(cfg)
 		}),
 		Create("UIGradient", {
 			Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 4)),
-				ColorSequenceKeypoint.new(0.20, Color3.fromRGB(234, 255, 0)),
-				ColorSequenceKeypoint.new(0.40, Color3.fromRGB(21, 255, 0)),
-				ColorSequenceKeypoint.new(0.60, Color3.fromRGB(0, 255, 255)),
-				ColorSequenceKeypoint.new(0.80, Color3.fromRGB(0, 17, 255)),
-				ColorSequenceKeypoint.new(0.90, Color3.fromRGB(255, 0, 251)),
-				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 4)),
+				ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+				ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 0, 255)),
+				ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 0, 255)),
+				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
+				ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 255, 0)),
+				ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 255, 0)),
+				ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0)),
 			}),
 			Enabled = true,
 			Offset = Vector2.new(0, 0),
@@ -1406,14 +1399,13 @@ function Element:New(cfg)
 	})
 
 	local function UpdateColorPicker()
-		local newColor
-		newColor = Color3.fromHSV(ColorH, ColorS, ColorV)
+		local newColor = Color3.fromHSV(ColorH, ColorS, ColorV)
 		boxcolor.BackgroundColor3 = newColor
 		color.BackgroundColor3 = Color3.fromHSV(ColorH, 1, 1)
 		color_selection.BackgroundColor3 = newColor
 		cfg.Callback(newColor)
 	end
-
+	
 	local function UpdateColorPickerPosition()
 		local ColorX = math.clamp(mouse.X - color.AbsolutePosition.X, 0, color.AbsoluteSize.X)
 		local ColorY = math.clamp(mouse.Y - color.AbsolutePosition.Y, 0, color.AbsoluteSize.Y)
@@ -1422,14 +1414,14 @@ function Element:New(cfg)
 		ColorV = 1 - (ColorY / color.AbsoluteSize.Y)
 		UpdateColorPicker()
 	end
-
+	
 	local function UpdateHuePickerPosition()
 		local HueY = math.clamp(mouse.Y - hue.AbsolutePosition.Y, 0, hue.AbsoluteSize.Y)
 		hue_selection.Position = UDim2.new(0.5, 0, HueY / hue.AbsoluteSize.Y, 0)
 		ColorH = HueY / hue.AbsoluteSize.Y
 		UpdateColorPicker()
 	end
-
+	
 	AddConnection(color.InputBegan, function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			if RainbowColorPicker then
@@ -1442,7 +1434,7 @@ function Element:New(cfg)
 			UpdateColorPickerPosition()
 		end
 	end)
-
+	
 	AddConnection(color.InputEnded, function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			if ColorInput then
@@ -1451,7 +1443,7 @@ function Element:New(cfg)
 			end
 		end
 	end)
-
+	
 	AddConnection(hue.InputBegan, function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			if RainbowColorPicker then
@@ -1464,7 +1456,7 @@ function Element:New(cfg)
 			UpdateHuePickerPosition()
 		end
 	end)
-
+	
 	AddConnection(hue.InputEnded, function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			if HueInput then
@@ -1473,12 +1465,12 @@ function Element:New(cfg)
 			end
 		end
 	end)
-
+	
 	AddConnection(Colorpicker.Frame.MouseButton1Click, function()
 		Colorpicker.ColorpickerToggle = not Colorpicker.ColorpickerToggle
 		colorpicker_frame.Visible = Colorpicker.ColorpickerToggle
 	end)
-
+	
 	AddConnection(rainbowtoggle.MouseButton1Click, function()
 		RainbowColorPicker = not RainbowColorPicker
 		Colorpicker.RainbowMode = RainbowColorPicker  -- Update the Colorpicker table
@@ -1490,10 +1482,7 @@ function Element:New(cfg)
 		if RainbowColorPicker then
 			local function UpdateRainbowColor()
 				while RainbowColorPicker do
-					-- boxcolor.BackgroundColor3 = Color3.fromHSV(lib.RainbowColorValue, 1, 1)
-                    -- color.BackgroundColor3 = Color3.fromHSV(lib.RainbowColorValue, 1, 1)
 					ColorH, ColorS, ColorV = lib.RainbowColorValue, 1, 1
-					-- ColorH = lib.RainbowColorValue
 					hue_selection.Position = UDim2.new(0.5, 0, 0, lib.HueSelectionPosition)
 					color_selection.Position = UDim2.new(1, 0, 0, 0)
 					UpdateColorPicker()
@@ -1503,7 +1492,7 @@ function Element:New(cfg)
 			coroutine.wrap(UpdateRainbowColor)()
 		end
 	end)
-
+	
 	function Colorpicker:Set(newColor)
 		ColorH, ColorS, ColorV = Color3.toHSV(newColor)
 		boxcolor.BackgroundColor3 = newColor
@@ -2520,10 +2509,208 @@ end
 
 return Element
 end)() end,
-    [12] = function()local wax,script,require=ImportGlobals(12)local ImportGlobals return (function(...)local TweenService = game:GetService("TweenService")
+    [12] = function()local wax,script,require=ImportGlobals(12)local ImportGlobals return (function(...)local Element = {}
+Element.__index = Element
+Element.__type = "Bind"
+local Tools = require(script.Parent.Parent.tools)
+
+local Create = Tools.Create
+local AddConnection = Tools.AddConnection
+
+local UserInputService = game:GetService("UserInputService")
+
+local BlacklistedKeys = {
+	Enum.KeyCode.Unknown,
+	Enum.KeyCode.W,
+	Enum.KeyCode.A,
+	Enum.KeyCode.S,
+	Enum.KeyCode.D,
+	Enum.KeyCode.Up,
+	Enum.KeyCode.Left,
+	Enum.KeyCode.Down,
+	Enum.KeyCode.Right,
+	Enum.KeyCode.Slash,
+	Enum.KeyCode.Tab,
+	Enum.KeyCode.Backspace,
+	Enum.KeyCode.Escape,
+}
+
+function Element:New(cfg)
+	cfg.Title = cfg.Title or "Title"
+	cfg.Description = cfg.Description or "Description"
+	cfg.Hold = cfg.Hold or false
+	cfg.Callback = cfg.Callback or function() end
+	cfg.ChangeCallback = cfg.ChangeCallback or function() end
+	local Bind = { Value, Binding = false, Type = "Bind" }
+	local Holding = false
+
+	Bind.Frame = Create("TextButton", {
+		Name = cfg.Title,
+		Font = Enum.Font.SourceSans,
+		Text = "",
+		TextTransparency = 1,
+		TextColor3 = Color3.fromRGB(0, 0, 0),
+		TextSize = 14,
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0.519230783, 0),
+		Size = UDim2.new(1, 0, 0, 40),
+		Visible = true,
+		Parent = self.Container,
+	}, {
+		Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(21, 21, 24),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+		Create("UIPadding", {
+			PaddingBottom = UDim.new(0, 10),
+			PaddingLeft = UDim.new(0, 14),
+			PaddingRight = UDim.new(0, 14),
+			PaddingTop = UDim.new(0, 10),
+			Archivable = true,
+		}),
+	})
+	Bind.Frame:SetAttribute("description", cfg.Description)
+
+	local titleLabel = Create("TextLabel", {
+		Name = "name",
+		Font = Enum.Font.Gotham,
+		Text = cfg.Title,
+		RichText = true,
+		TextColor3 = Color3.fromRGB(234, 234, 234),
+		TextSize = 14,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, 16),
+		Visible = true,
+		Parent = Bind.Frame,
+	})
+
+	local descriptionLabel = Create("TextLabel", {
+		Name = "description",
+		Font = Enum.Font.Gotham,
+		RichText = true,
+		Text = cfg.Description,
+		TextColor3 = Color3.fromRGB(154, 154, 154),
+		TextSize = 14,
+		TextWrapped = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		BackgroundTransparency = 1,
+		BorderColor3 = Color3.fromRGB(0, 0, 0),
+		BorderSizePixel = 0,
+		Position = UDim2.new(0, 0, 0, 20),
+		Size = UDim2.new(1, 0, 0, 16),
+		Visible = true,
+		Parent = Bind.Frame,
+	})
+
+	local ValueText = Create("TextLabel", {
+		BackgroundTransparency = 1,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(0, 0, 0, 20),
+		Font = Enum.Font.Gotham,
+		TextColor3 = Color3.fromRGB(240, 240, 240),
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Right,
+        AutomaticSize = Enum.AutomaticSize.X,
+		Text = "",
+		Parent = Bind.Frame,
+	}, {
+        Create("UIStroke", {
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Color = Color3.fromRGB(21, 21, 24),
+			Enabled = true,
+			LineJoinMode = Enum.LineJoinMode.Round,
+			Thickness = 1,
+			Archivable = true,
+		}),
+        Create("UICorner", {
+			CornerRadius = UDim.new(0, 4),
+			Archivable = true,
+		}),
+		Create("UIPadding", {
+			PaddingLeft = UDim.new(0, 7),
+			PaddingRight = UDim.new(0, 7),
+		}),
+    })
+
+    
+	AddConnection(Bind.Frame.InputEnded, function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+			if Bind.Binding then
+				return
+			end
+			Bind.Binding = true
+			ValueText.Text = "..."
+		end
+	end)
+
+	function Bind:Set(Key)
+		Bind.Binding = false
+		Bind.Value = Key or Bind.Value
+		Bind.Value = Bind.Value.Name or Bind.Value
+		ValueText.Text = Bind.Value
+		cfg.ChangeCallback(Bind.Value)
+	end
+
+	AddConnection(UserInputService.InputBegan, function(Input)
+		if UserInputService:GetFocusedTextBox() then
+			return
+		end
+		if (Input.KeyCode.Name == Bind.Value or Input.UserInputType.Name == Bind.Value) and not Bind.Binding then
+			if cfg.Hold then
+				Holding = true
+				cfg.Callback(Holding)
+			else
+				cfg.Callback()
+			end
+		elseif Bind.Binding then
+			local Key
+			pcall(function()
+				if not table.find(BlacklistedKeys, Input.KeyCode) then
+					Key = Input.KeyCode
+				end
+			end)
+			Key = Key or Bind.Value
+			Bind:Set(Key)
+		end
+	end)
+
+	AddConnection(UserInputService.InputEnded, function(Input)
+		if Input.KeyCode.Name == Bind.Value or Input.UserInputType.Name == Bind.Value then
+			if cfg.Hold and Holding then
+				Holding = false
+				cfg.Callback(Holding)
+			end
+		end
+	end)
+
+	Bind:Set(cfg.Default)
+	return Bind
+end
+
+return Element
+end)() end,
+    [13] = function()local wax,script,require=ImportGlobals(13)local ImportGlobals return (function(...)local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = game:GetService("Players").LocalPlayer
 local Mouse = LocalPlayer:GetMouse()
+
+-- local Library = require(script.Parent.Parent.Shared)
 
 local tools = { Signals = {} }
 
@@ -2552,7 +2739,10 @@ local tools = { Signals = {} }
 -- local currentTheme = themes.default
 
 function tools.AddConnection(Signal, Function)
-	table.insert(tools.Signals, Signal:Connect(Function))
+	-- if not Library:IsRunning() then return end
+	local connection = Signal:Connect(Function)
+	table.insert(tools.Signals, connection)
+	return connection  -- Return the connection so it can be disconnected later
 end
 
 -- ahh im to lazy to make now themes
@@ -2665,6 +2855,29 @@ local ObjectTree = {
         },
         {
             {
+                2,
+                1,
+                {
+                    "Components"
+                },
+                {
+                    {
+                        4,
+                        2,
+                        {
+                            "TabModule"
+                        }
+                    },
+                    {
+                        3,
+                        2,
+                        {
+                            "MainWindow"
+                        }
+                    }
+                }
+            },
+            {
                 5,
                 2,
                 {
@@ -2672,17 +2885,10 @@ local ObjectTree = {
                 },
                 {
                     {
-                        11,
+                        8,
                         2,
                         {
-                            "Toggle"
-                        }
-                    },
-                    {
-                        6,
-                        2,
-                        {
-                            "Button"
+                            "Dropdown"
                         }
                     },
                     {
@@ -2693,17 +2899,24 @@ local ObjectTree = {
                         }
                     },
                     {
+                        12,
+                        2,
+                        {
+                            "Bind"
+                        }
+                    },
+                    {
+                        11,
+                        2,
+                        {
+                            "Toggle"
+                        }
+                    },
+                    {
                         10,
                         2,
                         {
                             "Slider"
-                        }
-                    },
-                    {
-                        8,
-                        2,
-                        {
-                            "Dropdown"
                         }
                     },
                     {
@@ -2712,37 +2925,21 @@ local ObjectTree = {
                         {
                             "Colorpicker"
                         }
+                    },
+                    {
+                        6,
+                        2,
+                        {
+                            "Button"
+                        }
                     }
                 }
             },
             {
-                12,
+                13,
                 2,
                 {
                     "tools"
-                }
-            },
-            {
-                2,
-                1,
-                {
-                    "Components"
-                },
-                {
-                    {
-                        3,
-                        2,
-                        {
-                            "MainWindow"
-                        }
-                    },
-                    {
-                        4,
-                        2,
-                        {
-                            "TabModule"
-                        }
-                    }
                 }
             }
         }
@@ -2752,16 +2949,17 @@ local ObjectTree = {
 -- Line offsets for debugging (only included when minifyTables is false)
 local LineOffsets = {
     8,
-    [3] = 82,
-    [4] = 850,
-    [5] = 970,
-    [6] = 980,
-    [7] = 1096,
-    [8] = 1520,
-    [9] = 2028,
-    [10] = 2128,
-    [11] = 2375,
-    [12] = 2523
+    [3] = 75,
+    [4] = 843,
+    [5] = 963,
+    [6] = 973,
+    [7] = 1089,
+    [8] = 1509,
+    [9] = 2017,
+    [10] = 2117,
+    [11] = 2364,
+    [12] = 2512,
+    [13] = 2708
 }
 
 -- Misc AOT variable imports
